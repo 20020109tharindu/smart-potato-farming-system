@@ -1,8 +1,15 @@
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { useEffect, useState } from "react";
+
+import Dashboard from "../src/pages/Dashboard";
+import InputPage from "../src/pages/InputPage";
+import ResultsPage from "../src/pages/ResultsPage";
+import RecommendationPage from "../src/pages/RecommendationPage";
 
 function App() {
   const [backendMessage, setBackendMessage] = useState("Loading...");
 
+  // Backend health check
   useEffect(() => {
     fetch("http://127.0.0.1:5000/api/health")
       .then((res) => res.json())
@@ -11,19 +18,26 @@ function App() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-      <div className="bg-white shadow-lg rounded-2xl p-8 max-w-xl w-full">
-        <h1 className="text-3xl font-bold mb-4 text-green-700">
+    <BrowserRouter>
+      {/* Top header with backend status*/}
+      <div className='w-full bg-white shadow-md p-4 mb-6'>
+        <h1 className='text-2xl font-bold text-green-700 text-center'>
           Smart Potato Farming System
         </h1>
-        <p className="mb-2 text-gray-700">
-          Frontend: React + Vite + TailwindCSS
-        </p>
-        <p className="text-gray-700">
-          Backend status: <span className="font-semibold">{backendMessage}</span>
+        <p className='text-center text-gray-700 mt-1'>
+          Backend status:{" "}
+          <span className='font-semibold'>{backendMessage}</span>
         </p>
       </div>
-    </div>
+
+      {/* Page routing */}
+      <Routes>
+        <Route path='/in' element={<InputPage />} />
+        <Route path='/results' element={<ResultsPage />} />
+        <Route path='/recommendations' element={<RecommendationPage />} />
+        <Route path='/' element={<Dashboard />} />
+      </Routes>
+    </BrowserRouter>
   );
 }
 
