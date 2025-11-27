@@ -1,13 +1,25 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
+import { useLocaleFormat } from "../utils/format";
+
+// Helper function for currency formatting (LKR)
+const formatLKR = (amount) => {
+  if (amount === null || amount === undefined) return "N/A";
+  return `LKR ${Math.round(amount).toLocaleString()}`;
+};
 
 export default function ResultsPage() {
+  const navigate = useNavigate();
+  const { t } = useTranslation();
+
   const [data, setData] = useState(null);
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     // Simulate loading
-    setTimeout(() => {
+    const t = setTimeout(() => {
       // In actual app, get from navigation state or sessionStorage
       const mockForm = {
         season_type: "0",
@@ -30,24 +42,27 @@ export default function ResultsPage() {
         return;
       }
 
-      // Convert safely to numbers
+      // --- Calculation Logic ---
       const fieldSize = Number(mockForm.field_size_acres || 0);
       const fertilizer = Number(mockForm.planned_fertilizer_kg_per_acre || 0);
-      const marketPrice = 180; // Default market price
 
       const seedCost = Number(mockForm.seed_cost_lkr || 0);
       const fertCost = Number(mockForm.fertilizer_cost_lkr || 0);
       const laborCost = Number(mockForm.labor_cost_lkr || 0);
-
       const moneyAtHand = Number(mockForm.hands_on_money_lkr || 0);
 
-      // SIMPLE SAMPLE FORMULA (Replace with backend model)
+      // Predicted selling price (mock)
+      const basePrice = 200;
+      const priceModifier = fieldSize * 2;
+      const predictedPrice = Math.max(160, basePrice - priceModifier); // Min 160
+
+      // Yield (mock)
       const yieldKg = fieldSize * (1800 + (fertilizer - 50) * 10);
 
-      const revenue = yieldKg * marketPrice;
+      // Revenue, Cost, Profit
+      const revenue = yieldKg * predictedPrice;
       const cost = seedCost + fertCost + laborCost;
       const profit = revenue - cost;
-
       const feasible = cost <= moneyAtHand;
 
       setResult({
@@ -56,21 +71,23 @@ export default function ResultsPage() {
         cost,
         profit,
         feasible,
-        price: marketPrice,
+        predictedPrice,
       });
 
       setLoading(false);
     }, 800);
+
+    return () => clearTimeout(t);
   }, []);
 
+  // ✅ Navigate to Input page
   const handleNewPrediction = () => {
-    // In actual app: nav("/")
-    window.location.reload();
+    navigate("/in");
   };
 
+  // ✅ Navigate to Recommendations page (and pass state if you want)
   const handleViewRecommendations = () => {
-    // In actual app: nav("/recommendations")
-    alert("Navigate to recommendations page");
+    navigate("/recommendations", { state: { data, result } });
   };
 
   if (loading) {
@@ -189,9 +206,9 @@ export default function ResultsPage() {
           </div>
         )}
 
-        {/* Key Metrics Cards */}
-        <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6'>
-          {/* Yield Card */}
+        {/* Key Metrics (5 cards) */}
+        <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mb-6'>
+          {/* Estimated Yield */}
           <div className='bg-white rounded-xl shadow-lg p-6 border-t-4 border-blue-500 transform transition hover:scale-105'>
             <div className='flex items-center justify-between mb-2'>
               <span className='text-3xl'>🌾</span>
@@ -208,7 +225,24 @@ export default function ResultsPage() {
             </p>
           </div>
 
-          {/* Revenue Card */}
+          {/* Predicted Selling Price */}
+          <div className='bg-white rounded-xl shadow-lg p-6 border-t-4 border-yellow-500 transform transition hover:scale-105'>
+            <div className='flex items-center justify-between mb-2'>
+              <span className='text-3xl'>🏷️</span>
+              <span className='text-xs font-semibold text-gray-500 uppercase'>
+                Selling Price
+              </span>
+            </div>
+            <p className='text-3xl font-bold text-yellow-600'>
+              {formatLKR(result.predictedPrice)}
+            </p>
+            <p className='text-sm text-gray-600'>Per kg (Estimated)</p>
+            <p className='text-xs text-gray-500 mt-1'>
+              Based on market analysis
+            </p>
+          </div>
+
+          {/* Revenue */}
           <div className='bg-white rounded-xl shadow-lg p-6 border-t-4 border-green-500 transform transition hover:scale-105'>
             <div className='flex items-center justify-between mb-2'>
               <span className='text-3xl'>💵</span>
@@ -217,15 +251,15 @@ export default function ResultsPage() {
               </span>
             </div>
             <p className='text-3xl font-bold text-green-600'>
-              LKR {result.revenue.toLocaleString()}
+              {formatLKR(result.revenue)}
             </p>
             <p className='text-sm text-gray-600'>Expected income</p>
             <p className='text-xs text-gray-500 mt-1'>
-              @ LKR {result.price}/kg
+              @ {formatLKR(result.predictedPrice)}/kg
             </p>
           </div>
 
-          {/* Cost Card */}
+          {/* Total Cost */}
           <div className='bg-white rounded-xl shadow-lg p-6 border-t-4 border-orange-500 transform transition hover:scale-105'>
             <div className='flex items-center justify-between mb-2'>
               <span className='text-3xl'>💰</span>
@@ -234,12 +268,15 @@ export default function ResultsPage() {
               </span>
             </div>
             <p className='text-3xl font-bold text-orange-600'>
-              LKR {result.cost.toLocaleString()}
+              {formatLKR(result.cost)}
             </p>
             <p className='text-sm text-gray-600'>Investment needed</p>
+            <p className='text-xs text-gray-500 mt-1'>
+              Capital: {formatLKR(Number(data.hands_on_money_lkr))}
+            </p>
           </div>
 
-          {/* Profit Card */}
+          {/* Net Profit */}
           <div
             className={`bg-white rounded-xl shadow-lg p-6 border-t-4 ${
               result.profit >= 0 ? "border-purple-500" : "border-red-500"
@@ -258,7 +295,7 @@ export default function ResultsPage() {
                 result.profit >= 0 ? "text-purple-600" : "text-red-600"
               }`}
             >
-              LKR {result.profit.toLocaleString()}
+              {formatLKR(result.profit)}
             </p>
             <p className='text-sm text-gray-600'>
               {result.profit >= 0 ? "Expected profit" : "Expected loss"}
@@ -274,7 +311,7 @@ export default function ResultsPage() {
           </div>
         </div>
 
-        {/* Detailed Breakdown */}
+        {/* Cost Breakdown */}
         <div className='bg-white rounded-2xl shadow-xl p-8 mb-6'>
           <h2 className='text-2xl font-bold text-gray-800 mb-6 flex items-center'>
             <span className='text-3xl mr-3'>📊</span>
@@ -288,7 +325,7 @@ export default function ResultsPage() {
                 <span className='font-medium text-gray-700'>Seed Cost</span>
               </div>
               <span className='text-lg font-semibold text-gray-800'>
-                LKR {Number(data.seed_cost_lkr).toLocaleString()}
+                {formatLKR(Number(data.seed_cost_lkr))}
               </span>
             </div>
 
@@ -300,7 +337,7 @@ export default function ResultsPage() {
                 </span>
               </div>
               <span className='text-lg font-semibold text-gray-800'>
-                LKR {Number(data.fertilizer_cost_lkr).toLocaleString()}
+                {formatLKR(Number(data.fertilizer_cost_lkr))}
               </span>
             </div>
 
@@ -310,7 +347,7 @@ export default function ResultsPage() {
                 <span className='font-medium text-gray-700'>Labor Cost</span>
               </div>
               <span className='text-lg font-semibold text-gray-800'>
-                LKR {Number(data.labor_cost_lkr).toLocaleString()}
+                {formatLKR(Number(data.labor_cost_lkr))}
               </span>
             </div>
 
@@ -320,7 +357,7 @@ export default function ResultsPage() {
                   Total Investment
                 </span>
                 <span className='text-2xl font-bold text-gray-800'>
-                  LKR {result.cost.toLocaleString()}
+                  {formatLKR(result.cost)}
                 </span>
               </div>
             </div>
@@ -330,24 +367,22 @@ export default function ResultsPage() {
                 Available Capital
               </span>
               <span className='text-2xl font-bold text-purple-600'>
-                LKR {Number(data.hands_on_money_lkr).toLocaleString()}
+                {formatLKR(Number(data.hands_on_money_lkr))}
               </span>
             </div>
 
             {!result.feasible && (
               <div className='p-4 bg-red-50 rounded-lg border border-red-200'>
                 <p className='text-red-700 font-medium'>
-                  ⚠️ Additional funding needed: LKR{" "}
-                  {(
-                    result.cost - Number(data.hands_on_money_lkr)
-                  ).toLocaleString()}
+                  ⚠️ Additional funding needed:{" "}
+                  {formatLKR(result.cost - Number(data.hands_on_money_lkr))}
                 </p>
               </div>
             )}
           </div>
         </div>
 
-        {/* Farm Info Summary */}
+        {/* Farm Info */}
         <div className='bg-white rounded-2xl shadow-xl p-8 mb-6'>
           <h2 className='text-2xl font-bold text-gray-800 mb-6 flex items-center'>
             <span className='text-3xl mr-3'>🚜</span>
@@ -385,7 +420,7 @@ export default function ResultsPage() {
           </div>
         </div>
 
-        {/* Action Buttons */}
+        {/* Actions */}
         <div className='flex flex-col sm:flex-row gap-4'>
           <button
             onClick={handleViewRecommendations}
@@ -402,7 +437,6 @@ export default function ResultsPage() {
           </button>
         </div>
 
-        {/* Footer Note */}
         <div className='mt-6 text-center text-gray-600 text-sm'>
           <p>
             💡 These predictions are estimates based on your input data and

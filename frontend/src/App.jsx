@@ -33,8 +33,8 @@ function App() {
       {/* Page routing */}
       <Routes>
         <Route path='/in' element={<InputPage />} />
-        <Route path='/results' element={<ResultsPage />} />
-        <Route path='/recommendations' element={<RecommendationPage />} />
+        <Route path='/res' element={<ResultsPage />} />
+        <Route path='/re' element={<RecommendationPage />} />
         <Route path='/' element={<Dashboard />} />
       </Routes>
     </BrowserRouter>

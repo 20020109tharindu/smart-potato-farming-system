@@ -1,15 +1,24 @@
 import { useEffect, useState } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 export default function RecommendationPage() {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { t } = useTranslation();
+
   const [form, setForm] = useState(null);
   const [strategies, setStrategies] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedStrategy, setSelectedStrategy] = useState(null);
 
   useEffect(() => {
-    // Simulate loading
-    setTimeout(() => {
-      // In actual app, get from navigation state or sessionStorage
+    // Prefer data from navigation state or sessionStorage; fallback to mock
+    const t = setTimeout(() => {
+      const fromState = location.state?.form;
+      const fromStorage = sessionStorage.getItem("lastForm");
+      const parsedStorage = fromStorage ? JSON.parse(fromStorage) : null;
+
       const mockData = {
         season_type: "0",
         district: "Nuwara Eliya",
@@ -23,9 +32,10 @@ export default function RecommendationPage() {
         hands_on_money_lkr: "200000",
       };
 
-      setForm(mockData);
+      const data = fromState || parsedStorage || mockData;
+      setForm(data);
 
-      if (!mockData) {
+      if (!data) {
         setLoading(false);
         return;
       }
@@ -64,38 +74,32 @@ export default function RecommendationPage() {
         },
       ];
 
-      const money = Number(mockData.hands_on_money_lkr);
+      const money = Number(data.hands_on_money_lkr);
       const filtered = options.filter((o) => o.cost <= money);
 
-      // Calculate additional metrics
       const enrichedStrategies = filtered.map((strategy) => {
-        const marketPrice = 180; // LKR per kg
+        const marketPrice = 180; // LKR per kg (example)
         const revenue = strategy.yield * marketPrice;
         const profit = revenue - strategy.cost;
         const roi = ((profit / strategy.cost) * 100).toFixed(1);
-
-        return {
-          ...strategy,
-          revenue,
-          profit,
-          roi,
-          marketPrice,
-        };
+        return { ...strategy, revenue, profit, roi, marketPrice };
       });
 
       setStrategies(enrichedStrategies);
       setLoading(false);
     }, 800);
-  }, []);
 
+    return () => clearTimeout(t);
+  }, [location.state]);
+
+  // ✅ Navigate to Results page
   const handleBackToResults = () => {
-    // In actual app: nav("/results")
-    alert("Navigate back to results page");
+    navigate("/results", { state: { from: "recommendations", form } });
   };
 
+  // ✅ Navigate to Input page
   const handleNewPrediction = () => {
-    // In actual app: nav("/")
-    window.location.reload();
+    navigate("/in");
   };
 
   if (loading) {
@@ -153,7 +157,7 @@ export default function RecommendationPage() {
             </svg>
           </div>
           <h1 className='text-4xl font-bold text-gray-800 mb-2'>
-            Smart Recommendations
+            Smart Recommendations 
           </h1>
           <p className='text-gray-600'>
             Budget-aware strategies tailored to your available capital

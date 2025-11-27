@@ -1,6 +1,37 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 export default function InputPage() {
+  const navigate = useNavigate();
+  const { t } = useTranslation();
+
+  // Keep encoded values; translate only labels via t(key)
+  const seasons = [
+    { key: "season.maha", value: "0" },
+    { key: "season.yala", value: "1" },
+  ];
+
+  const soilTypes = [
+    { key: "soil.clay", value: "0" },
+    { key: "soil.silty", value: "1" },
+    { key: "soil.sandy", value: "2" },
+    { key: "soil.loamy", value: "3" },
+  ];
+
+  const varieties = [
+    { key: "var.granola", value: "0" },
+    { key: "var.local", value: "1" },
+    { key: "var.kufri", value: "2" },
+  ];
+
+  // District values as your backend expects; labels translated via keys
+  const districts = [
+    { key: "district.nuwara", value: "Nuwara Eliya" },
+    { key: "district.badulla", value: "Badulla" },
+    { key: "district.jaffna", value: "Jaffna" },
+  ];
+
   const [form, setForm] = useState({
     season_type: "",
     district: "",
@@ -17,123 +48,124 @@ export default function InputPage() {
   const [errors, setErrors] = useState({});
   const [submitted, setSubmitted] = useState(false);
 
-  const districts = ["Nuwara Eliya", "Badulla", "Jaffna"];
-
-  // Varieties with encoded values for backend
-  const varieties = [
-    { label: "Granola", value: "0" },
-    { label: "Local", value: "1" },
-    { label: "Kufri", value: "2" },
-  ];
-
-  // Seasons with encoded values for backend
-  const seasons = [
-    { label: "Maha", value: "0" },
-    { label: "Yala", value: "1" },
-  ];
-
-  // Soil types with encoded values for backend
-  const soilTypes = [
-    { label: "Clay", value: "0" },
-    { label: "Silty", value: "1" },
-    { label: "Sandy", value: "2" },
-    { label: "Loamy", value: "3" },
-  ];
-
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm({ ...form, [name]: value });
-    if (errors[name]) {
-      setErrors({ ...errors, [name]: "" });
-    }
+    if (errors[name]) setErrors({ ...errors, [name]: "" });
   };
 
   const validate = () => {
     const newErrors = {};
 
-    // Season validation
-    if (!form.season_type) {
-      newErrors.season_type = "Please select a season";
-    }
+    if (!form.season_type)
+      newErrors.season_type = t("error.season", {
+        defaultValue: "Please select a season",
+      });
 
-    // District validation
-    if (!form.district) {
-      newErrors.district = "Please select a district";
-    }
+    if (!form.district)
+      newErrors.district = t("error.district", {
+        defaultValue: "Please select a district",
+      });
 
-    // Field size validation
     const fieldSize = parseFloat(form.field_size_acres);
-    if (!form.field_size_acres) {
-      newErrors.field_size_acres = "Field size is required";
-    } else if (isNaN(fieldSize)) {
-      newErrors.field_size_acres = "Please enter a valid number";
-    } else if (fieldSize <= 0) {
-      newErrors.field_size_acres = "Field size must be greater than 0";
-    } else if (fieldSize > 5) {
-      newErrors.field_size_acres = "Field size cannot exceed 5 acres";
-    }
+    if (!form.field_size_acres)
+      newErrors.field_size_acres = t("error.fieldSize.required", {
+        defaultValue: "Field size is required",
+      });
+    else if (isNaN(fieldSize))
+      newErrors.field_size_acres = t("error.fieldSize.number", {
+        defaultValue: "Please enter a valid number",
+      });
+    else if (fieldSize <= 0)
+      newErrors.field_size_acres = t("error.fieldSize.positive", {
+        defaultValue: "Field size must be greater than 0",
+      });
+    else if (fieldSize > 5)
+      newErrors.field_size_acres = t("error.fieldSize.max", {
+        defaultValue: "Field size cannot exceed 5 acres",
+      });
 
-    // Potato variety validation
-    if (!form.potato_variety) {
-      newErrors.potato_variety = "Please select a potato variety";
-    }
+    if (!form.potato_variety)
+      newErrors.potato_variety = t("error.variety", {
+        defaultValue: "Please select a potato variety",
+      });
 
-    // Soil type validation
-    if (!form.soil_type) {
-      newErrors.soil_type = "Please select a soil type";
-    }
+    if (!form.soil_type)
+      newErrors.soil_type = t("error.soil", {
+        defaultValue: "Please select a soil type",
+      });
 
-    // Fertilizer validation
     const fertilizer = parseFloat(form.planned_fertilizer_kg_per_acre);
-    if (!form.planned_fertilizer_kg_per_acre) {
-      newErrors.planned_fertilizer_kg_per_acre =
-        "Fertilizer amount is required";
-    } else if (isNaN(fertilizer)) {
-      newErrors.planned_fertilizer_kg_per_acre = "Please enter a valid number";
-    } else if (fertilizer < 0) {
-      newErrors.planned_fertilizer_kg_per_acre =
-        "Fertilizer amount cannot be negative";
-    }
+    if (!form.planned_fertilizer_kg_per_acre)
+      newErrors.planned_fertilizer_kg_per_acre = t(
+        "error.fertilizer.required",
+        { defaultValue: "Fertilizer amount is required" }
+      );
+    else if (isNaN(fertilizer))
+      newErrors.planned_fertilizer_kg_per_acre = t("error.fertilizer.number", {
+        defaultValue: "Please enter a valid number",
+      });
+    else if (fertilizer < 0)
+      newErrors.planned_fertilizer_kg_per_acre = t(
+        "error.fertilizer.negative",
+        { defaultValue: "Fertilizer amount cannot be negative" }
+      );
 
-    // Seed cost validation
     const seedCost = parseFloat(form.seed_cost_lkr);
-    if (!form.seed_cost_lkr) {
-      newErrors.seed_cost_lkr = "Seed cost is required";
-    } else if (isNaN(seedCost)) {
-      newErrors.seed_cost_lkr = "Please enter a valid number";
-    } else if (seedCost < 0) {
-      newErrors.seed_cost_lkr = "Seed cost cannot be negative";
-    }
+    if (!form.seed_cost_lkr)
+      newErrors.seed_cost_lkr = t("error.seed.required", {
+        defaultValue: "Seed cost is required",
+      });
+    else if (isNaN(seedCost))
+      newErrors.seed_cost_lkr = t("error.seed.number", {
+        defaultValue: "Please enter a valid number",
+      });
+    else if (seedCost < 0)
+      newErrors.seed_cost_lkr = t("error.seed.negative", {
+        defaultValue: "Seed cost cannot be negative",
+      });
 
-    // Fertilizer cost validation
     const fertilizerCost = parseFloat(form.fertilizer_cost_lkr);
-    if (!form.fertilizer_cost_lkr) {
-      newErrors.fertilizer_cost_lkr = "Fertilizer cost is required";
-    } else if (isNaN(fertilizerCost)) {
-      newErrors.fertilizer_cost_lkr = "Please enter a valid number";
-    } else if (fertilizerCost < 0) {
-      newErrors.fertilizer_cost_lkr = "Fertilizer cost cannot be negative";
-    }
+    if (!form.fertilizer_cost_lkr)
+      newErrors.fertilizer_cost_lkr = t("error.fertCost.required", {
+        defaultValue: "Fertilizer cost is required",
+      });
+    else if (isNaN(fertilizerCost))
+      newErrors.fertilizer_cost_lkr = t("error.fertCost.number", {
+        defaultValue: "Please enter a valid number",
+      });
+    else if (fertilizerCost < 0)
+      newErrors.fertilizer_cost_lkr = t("error.fertCost.negative", {
+        defaultValue: "Fertilizer cost cannot be negative",
+      });
 
-    // Labor cost validation
     const laborCost = parseFloat(form.labor_cost_lkr);
-    if (!form.labor_cost_lkr) {
-      newErrors.labor_cost_lkr = "Labor cost is required";
-    } else if (isNaN(laborCost)) {
-      newErrors.labor_cost_lkr = "Please enter a valid number";
-    } else if (laborCost < 0) {
-      newErrors.labor_cost_lkr = "Labor cost cannot be negative";
-    }
+    if (!form.labor_cost_lkr)
+      newErrors.labor_cost_lkr = t("error.labor.required", {
+        defaultValue: "Labor cost is required",
+      });
+    else if (isNaN(laborCost))
+      newErrors.labor_cost_lkr = t("error.labor.number", {
+        defaultValue: "Please enter a valid number",
+      });
+    else if (laborCost < 0)
+      newErrors.labor_cost_lkr = t("error.labor.negative", {
+        defaultValue: "Labor cost cannot be negative",
+      });
 
-    // Available capital validation
     const handsOnMoney = parseFloat(form.hands_on_money_lkr);
-    if (!form.hands_on_money_lkr) {
-      newErrors.hands_on_money_lkr = "Available capital is required";
-    } else if (isNaN(handsOnMoney)) {
-      newErrors.hands_on_money_lkr = "Please enter a valid number";
-    } else if (handsOnMoney < 150000) {
-      newErrors.hands_on_money_lkr = "Minimum capital required is LKR 150,000";
-    }
+    if (!form.hands_on_money_lkr)
+      newErrors.hands_on_money_lkr = t("error.capital.required", {
+        defaultValue: "Available capital is required",
+      });
+    else if (isNaN(handsOnMoney))
+      newErrors.hands_on_money_lkr = t("error.capital.number", {
+        defaultValue: "Please enter a valid number",
+      });
+    else if (handsOnMoney < 150000)
+      newErrors.hands_on_money_lkr = t("error.capital.min", {
+        defaultValue: "Minimum capital required is LKR 150,000",
+      });
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -142,12 +174,11 @@ export default function InputPage() {
   const submit = () => {
     if (validate()) {
       setSubmitted(true);
-      console.log("Form Data:", form);
-
-      // Scroll to top to see success message
-      window.scrollTo({ top: 0, behavior: "smooth" });
+      // Persist so Results can read on refresh
+      sessionStorage.setItem("lastForm", JSON.stringify(form));
+      // Navigate to results with form
+      navigate("/results", { state: { form } });
     } else {
-      // Scroll to first error
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
   };
@@ -175,10 +206,13 @@ export default function InputPage() {
         <div className='bg-white rounded-2xl shadow-xl p-8'>
           <div className='text-center mb-8'>
             <h1 className='text-4xl font-bold text-green-800 mb-2'>
-              🥔 Potato Farm Analytics - By Hashini
+              🥔 Potato Farm Analytics
             </h1>
             <p className='text-gray-600'>
-              Enter your farm details for yield and profit prediction
+              {t("input.subtitle", {
+                defaultValue:
+                  "Enter your farm details for yield and profit prediction",
+              })}
             </p>
           </div>
 
@@ -200,11 +234,14 @@ export default function InputPage() {
                 </div>
                 <div className='ml-3'>
                   <p className='font-medium'>
-                    Success! Your data has been submitted.
+                    {t("input.success", {
+                      defaultValue: "Success! Redirecting to results…",
+                    })}
                   </p>
                   <p className='text-sm'>
-                    In the actual app, you would be redirected to the results
-                    page.
+                    {t("input.successHint", {
+                      defaultValue: "If not redirected, click Predict again.",
+                    })}
                   </p>
                 </div>
               </div>
@@ -212,21 +249,27 @@ export default function InputPage() {
                 onClick={reset}
                 className='mt-3 text-sm underline hover:text-green-900'
               >
-                Submit another entry
+                {t("input.submitAnother", {
+                  defaultValue: "Submit another entry",
+                })}
               </button>
             </div>
           )}
 
           <div className='space-y-6'>
-            {/* Season & Location Section */}
+            {/* Season & Location */}
             <div className='bg-green-50 p-6 rounded-xl'>
               <h2 className='text-xl font-semibold text-green-800 mb-4'>
-                📅 Season & Location
+                📅{" "}
+                {t("section.seasonLocation", {
+                  defaultValue: "Season & Location",
+                })}
               </h2>
               <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+                {/* Season */}
                 <div>
                   <label className='block text-sm font-medium text-gray-700 mb-2'>
-                    Season *
+                    {t("label.season", { defaultValue: "Season" })} *
                   </label>
                   <select
                     name='season_type'
@@ -236,10 +279,12 @@ export default function InputPage() {
                       errors.season_type ? "border-red-500" : "border-gray-300"
                     } rounded-lg p-3 focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white`}
                   >
-                    <option value=''>Select Season</option>
-                    {seasons.map((season) => (
-                      <option key={season.value} value={season.value}>
-                        {season.label}
+                    <option value=''>
+                      {t("select.season", { defaultValue: "Select Season" })}
+                    </option>
+                    {seasons.map((s) => (
+                      <option key={s.value} value={s.value}>
+                        {t(s.key)}
                       </option>
                     ))}
                   </select>
@@ -250,9 +295,10 @@ export default function InputPage() {
                   )}
                 </div>
 
+                {/* District */}
                 <div>
                   <label className='block text-sm font-medium text-gray-700 mb-2'>
-                    District *
+                    {t("label.district", { defaultValue: "District" })} *
                   </label>
                   <select
                     name='district'
@@ -262,10 +308,14 @@ export default function InputPage() {
                       errors.district ? "border-red-500" : "border-gray-300"
                     } rounded-lg p-3 focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white`}
                   >
-                    <option value=''>Select District</option>
-                    {districts.map((district) => (
-                      <option key={district} value={district}>
-                        {district}
+                    <option value=''>
+                      {t("select.district", {
+                        defaultValue: "Select District",
+                      })}
+                    </option>
+                    {districts.map((d) => (
+                      <option key={d.value} value={d.value}>
+                        {t(d.key)}
                       </option>
                     ))}
                   </select>
@@ -278,22 +328,28 @@ export default function InputPage() {
               </div>
             </div>
 
-            {/* Farm Details Section */}
+            {/* Farm Details */}
             <div className='bg-blue-50 p-6 rounded-xl'>
               <h2 className='text-xl font-semibold text-blue-800 mb-4'>
-                🌱 Farm Details
+                🌱 {t("section.farmDetails", { defaultValue: "Farm Details" })}
               </h2>
               <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+                {/* Field size */}
                 <div>
                   <label className='block text-sm font-medium text-gray-700 mb-2'>
-                    Field Size (Acres) *
+                    {t("label.fieldSize", {
+                      defaultValue: "Field Size (Acres)",
+                    })}{" "}
+                    *
                   </label>
                   <input
                     type='number'
                     name='field_size_acres'
                     value={form.field_size_acres}
                     onChange={handleChange}
-                    placeholder='Max 5 acres'
+                    placeholder={t("placeholder.fieldSize", {
+                      defaultValue: "Max 5 acres",
+                    })}
                     step='0.1'
                     min='0.1'
                     max='5'
@@ -310,9 +366,10 @@ export default function InputPage() {
                   )}
                 </div>
 
+                {/* Variety */}
                 <div>
                   <label className='block text-sm font-medium text-gray-700 mb-2'>
-                    Potato Variety *
+                    {t("label.variety", { defaultValue: "Potato Variety" })} *
                   </label>
                   <select
                     name='potato_variety'
@@ -324,10 +381,12 @@ export default function InputPage() {
                         : "border-gray-300"
                     } rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white`}
                   >
-                    <option value=''>Select Variety</option>
-                    {varieties.map((variety) => (
-                      <option key={variety.value} value={variety.value}>
-                        {variety.label}
+                    <option value=''>
+                      {t("select.variety", { defaultValue: "Select Variety" })}
+                    </option>
+                    {varieties.map((v) => (
+                      <option key={v.value} value={v.value}>
+                        {t(v.key)}
                       </option>
                     ))}
                   </select>
@@ -338,9 +397,10 @@ export default function InputPage() {
                   )}
                 </div>
 
+                {/* Soil */}
                 <div>
                   <label className='block text-sm font-medium text-gray-700 mb-2'>
-                    Soil Type *
+                    {t("label.soil", { defaultValue: "Soil Type" })} *
                   </label>
                   <select
                     name='soil_type'
@@ -350,10 +410,12 @@ export default function InputPage() {
                       errors.soil_type ? "border-red-500" : "border-gray-300"
                     } rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white`}
                   >
-                    <option value=''>Select Soil Type</option>
-                    {soilTypes.map((soil) => (
-                      <option key={soil.value} value={soil.value}>
-                        {soil.label}
+                    <option value=''>
+                      {t("select.soil", { defaultValue: "Select Soil Type" })}
+                    </option>
+                    {soilTypes.map((s) => (
+                      <option key={s.value} value={s.value}>
+                        {t(s.key)}
                       </option>
                     ))}
                   </select>
@@ -364,16 +426,22 @@ export default function InputPage() {
                   )}
                 </div>
 
+                {/* Planned fertilizer */}
                 <div>
                   <label className='block text-sm font-medium text-gray-700 mb-2'>
-                    Planned Fertilizer (kg/acre) *
+                    {t("label.fertilizerPlan", {
+                      defaultValue: "Planned Fertilizer (kg/acre)",
+                    })}{" "}
+                    *
                   </label>
                   <input
                     type='number'
                     name='planned_fertilizer_kg_per_acre'
                     value={form.planned_fertilizer_kg_per_acre}
                     onChange={handleChange}
-                    placeholder='Enter amount'
+                    placeholder={t("placeholder.fertilizer", {
+                      defaultValue: "Enter amount",
+                    })}
                     step='0.1'
                     min='0'
                     className={`w-full border ${
@@ -391,22 +459,28 @@ export default function InputPage() {
               </div>
             </div>
 
-            {/* Cost Details Section */}
+            {/* Cost Details */}
             <div className='bg-amber-50 p-6 rounded-xl'>
               <h2 className='text-xl font-semibold text-amber-800 mb-4'>
-                💰 Cost Details (LKR)
+                💰{" "}
+                {t("section.costDetails", {
+                  defaultValue: "Cost Details (LKR)",
+                })}
               </h2>
               <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+                {/* Seed cost */}
                 <div>
                   <label className='block text-sm font-medium text-gray-700 mb-2'>
-                    Seed Cost *
+                    {t("label.seedCost", { defaultValue: "Seed Cost" })} *
                   </label>
                   <input
                     type='number'
                     name='seed_cost_lkr'
                     value={form.seed_cost_lkr}
                     onChange={handleChange}
-                    placeholder='Enter seed cost'
+                    placeholder={t("placeholder.seedCost", {
+                      defaultValue: "Enter seed cost",
+                    })}
                     step='0.01'
                     min='0'
                     className={`w-full border ${
@@ -422,16 +496,19 @@ export default function InputPage() {
                   )}
                 </div>
 
+                {/* Fertilizer cost */}
                 <div>
                   <label className='block text-sm font-medium text-gray-700 mb-2'>
-                    Fertilizer Cost *
+                    {t("label.fertCost", { defaultValue: "Fertilizer Cost" })} *
                   </label>
                   <input
                     type='number'
                     name='fertilizer_cost_lkr'
                     value={form.fertilizer_cost_lkr}
                     onChange={handleChange}
-                    placeholder='Enter fertilizer cost'
+                    placeholder={t("placeholder.fertCost", {
+                      defaultValue: "Enter fertilizer cost",
+                    })}
                     step='0.01'
                     min='0'
                     className={`w-full border ${
@@ -447,16 +524,19 @@ export default function InputPage() {
                   )}
                 </div>
 
+                {/* Labor cost */}
                 <div>
                   <label className='block text-sm font-medium text-gray-700 mb-2'>
-                    Labor Cost *
+                    {t("label.laborCost", { defaultValue: "Labor Cost" })} *
                   </label>
                   <input
                     type='number'
                     name='labor_cost_lkr'
                     value={form.labor_cost_lkr}
                     onChange={handleChange}
-                    placeholder='Enter labor cost'
+                    placeholder={t("placeholder.laborCost", {
+                      defaultValue: "Enter labor cost",
+                    })}
                     step='0.01'
                     min='0'
                     className={`w-full border ${
@@ -472,16 +552,20 @@ export default function InputPage() {
                   )}
                 </div>
 
+                {/* Capital */}
                 <div>
                   <label className='block text-sm font-medium text-gray-700 mb-2'>
-                    Available Capital *
+                    {t("label.capital", { defaultValue: "Available Capital" })}{" "}
+                    *
                   </label>
                   <input
                     type='number'
                     name='hands_on_money_lkr'
                     value={form.hands_on_money_lkr}
                     onChange={handleChange}
-                    placeholder='Min LKR 150,000'
+                    placeholder={t("placeholder.capital", {
+                      defaultValue: "Min LKR 150,000",
+                    })}
                     step='0.01'
                     min='150000'
                     className={`w-full border ${
@@ -499,17 +583,22 @@ export default function InputPage() {
               </div>
             </div>
 
+            {/* Submit */}
             <button
               onClick={submit}
               className='w-full bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 text-white font-semibold py-4 px-6 rounded-xl shadow-lg transform transition hover:scale-105 focus:outline-none focus:ring-4 focus:ring-green-300'
             >
-              🚀 Predict Yield & Profit
+              {t("cta.predict", { defaultValue: "🚀 Predict Yield & Profit" })}
             </button>
           </div>
         </div>
 
         <div className='mt-6 text-center text-gray-600 text-sm'>
-          <p>* All fields are required</p>
+          <p>
+            {t("input.allRequired", {
+              defaultValue: "* All fields are required",
+            })}
+          </p>
         </div>
       </div>
     </div>
