@@ -69,7 +69,7 @@ export default function ResultsPage() {
   };
 
   const handleViewRecommendations = () => {
-    // In actual app: nav("/recommendations")
+      // In actual app: nav("/app/recommendations")
     alert("Navigate to recommendations page");
   };
 
