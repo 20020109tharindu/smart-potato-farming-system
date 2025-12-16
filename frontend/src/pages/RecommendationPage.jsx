@@ -89,7 +89,7 @@ export default function RecommendationPage() {
   }, []);
 
   const handleBackToResults = () => {
-    // In actual app: nav("/results")
+    // In actual app: nav("/app/results")
     alert("Navigate back to results page");
   };
 

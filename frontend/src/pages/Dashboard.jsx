@@ -8,19 +8,19 @@ export default function Dashboard() {
     {
       title: "Start New Input",
       desc: "Enter field details, costs and constraints to get predictions.",
-      to: "/in",
+      to: "/app/in",
       cta: "Go to Input Page",
     },
     {
       title: "View Results",
       desc: "Check predicted yield, revenue and key metrics.",
-      to: "/results",
+      to: "/app/results",
       cta: "Open Results",
     },
     {
       title: "Recommendations",
       desc: "See actionable fertilizer, irrigation and variety tips.",
-      to: "/recommendations",
+      to: "/app/recommendations",
       cta: "See Recommendations",
     },
   ];
