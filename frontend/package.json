@@ -10,20 +10,12 @@
     "preview": "vite preview"
   },
   "dependencies": {
-<<<<<<< HEAD
     "i18next": "^25.6.3",
     "i18next-browser-languagedetector": "^8.2.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-i18next": "^16.3.5",
     "react-router-dom": "^7.9.6"
-=======
-    "firebase": "^10.14.1",
-    "lucide-react": "^0.562.0",
-    "react": "^19.2.0",
-    "react-dom": "^19.2.0",
-    "react-router-dom": "^6.14.1"
->>>>>>> 0aa9b2edbeefa0bcf539f487f7fb2785e38743d4
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",

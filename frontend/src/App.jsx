@@ -23,7 +23,6 @@ function App() {
 
   return (
     <BrowserRouter>
-<<<<<<< HEAD
       {/* Top header with backend status */}
       <div className='w-full bg-white shadow-md p-4 mb-6'>
         <h1 className='text-2xl font-bold text-green-700 text-center'>
@@ -52,29 +51,6 @@ function App() {
 
         {/* fallback: anything unknown goes home */}
         <Route path='*' element={<Navigate to='/' replace />} />
-=======
-      <Routes>
-        {/* Public */}
-        <Route path='/' element={<Landing />} />
-        <Route path='/signin' element={<SignIn />} />
-        <Route path='/signup' element={<SignUp />} />
-
-        {/* Protected */}
-        <Route path='/app' element={<Layout />}>
-          {/* Empty routes (no dashboard) */}
-          <Route path='seed-readiness' element={null} />
-          <Route path='soil-health' element={null} />
-          <Route path='disease' element={null} />
-
-          {/* COST ANALYSIS ONLY */}
-          <Route path='cost'>
-            <Route index element={<Dashboard />} />
-            <Route path='in' element={<InputPage />} />
-            <Route path='results' element={<ResultsPage />} />
-            <Route path='recommendations' element={<RecommendationPage />} />
-          </Route>
-        </Route>
->>>>>>> 0aa9b2edbeefa0bcf539f487f7fb2785e38743d4
       </Routes>
     </BrowserRouter>
   );
