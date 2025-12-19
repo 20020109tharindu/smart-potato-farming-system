@@ -5,7 +5,7 @@ export default function InputPage() {
     season_type: "",
     district: "",
     field_size_acres: "",
-    potato_variety: "",
+
     soil_type: "",
     planned_fertilizer_kg_per_acre: "",
     seed_cost_lkr: "",
@@ -18,13 +18,6 @@ export default function InputPage() {
   const [submitted, setSubmitted] = useState(false);
 
   const districts = ["Nuwara Eliya", "Badulla", "Jaffna"];
-
-  // Varieties with encoded values for backend
-  const varieties = [
-    { label: "Granola", value: "0" },
-    { label: "Local", value: "1" },
-    { label: "Kufri", value: "2" },
-  ];
 
   // Seasons with encoded values for backend
   const seasons = [
@@ -71,11 +64,6 @@ export default function InputPage() {
       newErrors.field_size_acres = "Field size must be greater than 0";
     } else if (fieldSize > 5) {
       newErrors.field_size_acres = "Field size cannot exceed 5 acres";
-    }
-
-    // Potato variety validation
-    if (!form.potato_variety) {
-      newErrors.potato_variety = "Please select a potato variety";
     }
 
     // Soil type validation
@@ -157,7 +145,7 @@ export default function InputPage() {
       season_type: "",
       district: "",
       field_size_acres: "",
-      potato_variety: "",
+
       soil_type: "",
       planned_fertilizer_kg_per_acre: "",
       seed_cost_lkr: "",
@@ -306,34 +294,6 @@ export default function InputPage() {
                   {errors.field_size_acres && (
                     <p className='text-red-500 text-xs mt-1'>
                       {errors.field_size_acres}
-                    </p>
-                  )}
-                </div>
-
-                <div>
-                  <label className='block text-sm font-medium text-gray-700 mb-2'>
-                    Potato Variety *
-                  </label>
-                  <select
-                    name='potato_variety'
-                    value={form.potato_variety}
-                    onChange={handleChange}
-                    className={`w-full border ${
-                      errors.potato_variety
-                        ? "border-red-500"
-                        : "border-gray-300"
-                    } rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white`}
-                  >
-                    <option value=''>Select Variety</option>
-                    {varieties.map((variety) => (
-                      <option key={variety.value} value={variety.value}>
-                        {variety.label}
-                      </option>
-                    ))}
-                  </select>
-                  {errors.potato_variety && (
-                    <p className='text-red-500 text-xs mt-1'>
-                      {errors.potato_variety}
                     </p>
                   )}
                 </div>

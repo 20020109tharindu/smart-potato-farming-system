@@ -34,7 +34,7 @@ export default function Header() {
         ) : (
           <button
             onClick={() => navigate('/signin')}
-            className='px-3 py-1 rounded bg-green-50 text-green-700 border border-green-200'
+            className='px-3 py-1 rounded bg-gree-50 text-green-700 border border-green-200'
           >
             Sign in
           </button>

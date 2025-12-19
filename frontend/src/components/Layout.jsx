@@ -1,15 +1,15 @@
-import React from 'react'
-import { Outlet, Navigate } from 'react-router-dom'
-import Header from './header'
-import Sidebar from './sidebar'
-import Footer from './footer'
-import { useAuth } from '../contexts/AuthContext'
+import React from "react";
+import { Outlet, Navigate } from "react-router-dom";
+import Header from "./header";
+import Sidebar from "./sidebar";
+import Footer from "./footer";
+import { useAuth } from "../contexts/AuthContext";
 
 export default function Layout() {
-  const { currentUser } = useAuth()
+  const { currentUser } = useAuth();
 
   if (!currentUser) {
-    return <Navigate to='/signin' replace />
+    return <Navigate to='/signin' replace />;
   }
 
   return (
@@ -23,5 +23,5 @@ export default function Layout() {
         </main>
       </div>
     </div>
-  )
+  );
 }
