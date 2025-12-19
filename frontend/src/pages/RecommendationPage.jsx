@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import LanguageSwitcher from "../components/LanguageSwitcher.jsx";
 
 export default function RecommendationPage() {
   const navigate = useNavigate();
@@ -115,9 +114,6 @@ export default function RecommendationPage() {
   }, [location.state, t]);
 
   const handleBackToResults = () => {
-<<<<<<< HEAD
-    navigate("/results", { state: { from: "recommendations", form } });
-=======
     // In actual app: nav("/app/results")
     alert("Navigate back to results page");
   };
@@ -125,9 +121,7 @@ export default function RecommendationPage() {
   const handleNewPrediction = () => {
     // In actual app: nav("/")
     window.location.reload();
->>>>>>> 0aa9b2edbeefa0bcf539f487f7fb2785e38743d4
   };
-  const handleNewPrediction = () => navigate("/in");
 
   if (loading) {
     return (

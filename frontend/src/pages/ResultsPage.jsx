@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import LanguageSwitcher from "../components/LanguageSwitcher.jsx";
 
 // Helper function for currency formatting (LKR)
 const formatLKR = (amount) => {
