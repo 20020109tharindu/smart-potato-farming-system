@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useTranslation } from "react-i18next";
+
 import LanguageSwitcher from "../components/LanguageSwitcher.jsx";
 
 export default function InputPage() {
@@ -42,7 +42,6 @@ export default function InputPage() {
     { key: "soil.sandy", value: "2" },
     { key: "soil.loamy", value: "3" },
   ];
-
 
   const districts = [
     { key: "district.nuwara", value: "Nuwara Eliya" },
@@ -87,9 +86,12 @@ export default function InputPage() {
         defaultValue: "Field size cannot exceed 5 acres",
       });
 
+<<<<<<< Updated upstream
 <<<<<<< HEAD
    
 
+=======
+>>>>>>> Stashed changes
     if (!form.soil_type)
       newErrors.soil_type = t("error.soil", {
         defaultValue: "Please select a soil type",
@@ -194,11 +196,15 @@ export default function InputPage() {
       season_type: "",
       district: "",
       field_size_acres: "",
+<<<<<<< Updated upstream
 <<<<<<< HEAD
     
 =======
 
 >>>>>>> 0aa9b2edbeefa0bcf539f487f7fb2785e38743d4
+=======
+
+>>>>>>> Stashed changes
       soil_type: "",
       planned_fertilizer_kg_per_acre: "",
       seed_cost_lkr: "",
@@ -382,9 +388,12 @@ export default function InputPage() {
                   )}
                 </div>
 
+<<<<<<< Updated upstream
 <<<<<<< HEAD
               
 
+=======
+>>>>>>> Stashed changes
                 {/* Soil */}
                 <div>
                   <label className='block text-sm font-medium text-gray-700 mb-2'>
