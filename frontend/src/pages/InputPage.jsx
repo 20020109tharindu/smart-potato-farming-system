@@ -9,6 +9,10 @@ export default function InputPage() {
     season_type: "",
     district: "",
     field_size_acres: "",
+<<<<<<< HEAD
+=======
+
+>>>>>>> 0aa9b2edbeefa0bcf539f487f7fb2785e38743d4
     soil_type: "",
     planned_fertilizer_kg_per_acre: "",
     seed_cost_lkr: "",
@@ -20,7 +24,13 @@ export default function InputPage() {
   const [errors, setErrors] = useState({});
   const [submitted, setSubmitted] = useState(false);
 
+<<<<<<< HEAD
   // Keep encoded values for backend; translate only the labels
+=======
+  const districts = ["Nuwara Eliya", "Badulla", "Jaffna"];
+
+  // Seasons with encoded values for backend
+>>>>>>> 0aa9b2edbeefa0bcf539f487f7fb2785e38743d4
   const seasons = [
     { key: "season.maha", value: "0" },
     { key: "season.yala", value: "1" },
@@ -77,12 +87,19 @@ export default function InputPage() {
         defaultValue: "Field size cannot exceed 5 acres",
       });
 
+<<<<<<< HEAD
    
 
     if (!form.soil_type)
       newErrors.soil_type = t("error.soil", {
         defaultValue: "Please select a soil type",
       });
+=======
+    // Soil type validation
+    if (!form.soil_type) {
+      newErrors.soil_type = "Please select a soil type";
+    }
+>>>>>>> 0aa9b2edbeefa0bcf539f487f7fb2785e38743d4
 
     const fertilizer = parseFloat(form.planned_fertilizer_kg_per_acre);
     if (!form.planned_fertilizer_kg_per_acre)
@@ -177,7 +194,11 @@ export default function InputPage() {
       season_type: "",
       district: "",
       field_size_acres: "",
+<<<<<<< HEAD
     
+=======
+
+>>>>>>> 0aa9b2edbeefa0bcf539f487f7fb2785e38743d4
       soil_type: "",
       planned_fertilizer_kg_per_acre: "",
       seed_cost_lkr: "",
@@ -361,12 +382,18 @@ export default function InputPage() {
                   )}
                 </div>
 
+<<<<<<< HEAD
               
 
                 {/* Soil */}
                 <div>
                   <label className='block text-sm font-medium text-gray-700 mb-2'>
                     {t("label.soil", { defaultValue: "Soil Type" })} *
+=======
+                <div>
+                  <label className='block text-sm font-medium text-gray-700 mb-2'>
+                    Soil Type *
+>>>>>>> 0aa9b2edbeefa0bcf539f487f7fb2785e38743d4
                   </label>
                   <select
                     name='soil_type'

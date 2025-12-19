@@ -66,9 +66,21 @@ export default function ResultsPage() {
     setLoading(false);
   }, []);
 
+<<<<<<< HEAD
   const handleNewPrediction = () => navigate("/in");
   const handleViewRecommendations = () =>
     navigate("/recommendations", { state: { data, result } });
+=======
+  const handleNewPrediction = () => {
+    // In actual app: nav("/")
+    window.location.reload();
+  };
+
+  const handleViewRecommendations = () => {
+      // In actual app: nav("/app/recommendations")
+    alert("Navigate to recommendations page");
+  };
+>>>>>>> 0aa9b2edbeefa0bcf539f487f7fb2785e38743d4
 
   if (loading) {
     return (

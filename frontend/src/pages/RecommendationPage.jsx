@@ -116,7 +116,17 @@ export default function RecommendationPage() {
   }, [location.state, t]);
 
   const handleBackToResults = () => {
+<<<<<<< HEAD
     navigate("/results", { state: { from: "recommendations", form } });
+=======
+    // In actual app: nav("/app/results")
+    alert("Navigate back to results page");
+  };
+
+  const handleNewPrediction = () => {
+    // In actual app: nav("/")
+    window.location.reload();
+>>>>>>> 0aa9b2edbeefa0bcf539f487f7fb2785e38743d4
   };
   const handleNewPrediction = () => navigate("/in");
 
