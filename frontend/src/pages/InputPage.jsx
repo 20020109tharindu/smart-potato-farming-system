@@ -1,12 +1,26 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import LanguageSwitcher from "../components/LanguageSwitcher.jsx";
 
 export default function InputPage() {
-  const navigate = useNavigate();
   const { t } = useTranslation();
 
-  // Keep encoded values; translate only labels via t(key)
+  const [form, setForm] = useState({
+    season_type: "",
+    district: "",
+    field_size_acres: "",
+    soil_type: "",
+    planned_fertilizer_kg_per_acre: "",
+    seed_cost_lkr: "",
+    fertilizer_cost_lkr: "",
+    labor_cost_lkr: "",
+    hands_on_money_lkr: "",
+  });
+
+  const [errors, setErrors] = useState({});
+  const [submitted, setSubmitted] = useState(false);
+
+  // Keep encoded values for backend; translate only the labels
   const seasons = [
     { key: "season.maha", value: "0" },
     { key: "season.yala", value: "1" },
@@ -19,34 +33,12 @@ export default function InputPage() {
     { key: "soil.loamy", value: "3" },
   ];
 
-  const varieties = [
-    { key: "var.granola", value: "0" },
-    { key: "var.local", value: "1" },
-    { key: "var.kufri", value: "2" },
-  ];
 
-  // District values as your backend expects; labels translated via keys
   const districts = [
     { key: "district.nuwara", value: "Nuwara Eliya" },
     { key: "district.badulla", value: "Badulla" },
     { key: "district.jaffna", value: "Jaffna" },
   ];
-
-  const [form, setForm] = useState({
-    season_type: "",
-    district: "",
-    field_size_acres: "",
-    potato_variety: "",
-    soil_type: "",
-    planned_fertilizer_kg_per_acre: "",
-    seed_cost_lkr: "",
-    fertilizer_cost_lkr: "",
-    labor_cost_lkr: "",
-    hands_on_money_lkr: "",
-  });
-
-  const [errors, setErrors] = useState({});
-  const [submitted, setSubmitted] = useState(false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -85,10 +77,7 @@ export default function InputPage() {
         defaultValue: "Field size cannot exceed 5 acres",
       });
 
-    if (!form.potato_variety)
-      newErrors.potato_variety = t("error.variety", {
-        defaultValue: "Please select a potato variety",
-      });
+   
 
     if (!form.soil_type)
       newErrors.soil_type = t("error.soil", {
@@ -174,10 +163,10 @@ export default function InputPage() {
   const submit = () => {
     if (validate()) {
       setSubmitted(true);
-      // Persist so Results can read on refresh
+      // In your app you likely navigate to /results and/or save form:
       sessionStorage.setItem("lastForm", JSON.stringify(form));
-      // Navigate to results with form
-      navigate("/results", { state: { form } });
+      // window.location.href = "/results"; // if you want automatic redirect
+      window.scrollTo({ top: 0, behavior: "smooth" });
     } else {
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
@@ -188,7 +177,7 @@ export default function InputPage() {
       season_type: "",
       district: "",
       field_size_acres: "",
-      potato_variety: "",
+    
       soil_type: "",
       planned_fertilizer_kg_per_acre: "",
       seed_cost_lkr: "",
@@ -203,10 +192,14 @@ export default function InputPage() {
   return (
     <div className='min-h-screen bg-gradient-to-br from-green-50 to-blue-50 py-8 px-4'>
       <div className='max-w-4xl mx-auto'>
+        <div className='flex justify-end mb-4'>
+          <LanguageSwitcher />
+        </div>
+
         <div className='bg-white rounded-2xl shadow-xl p-8'>
           <div className='text-center mb-8'>
             <h1 className='text-4xl font-bold text-green-800 mb-2'>
-              🥔 Potato Farm Analytics
+              🥔 {t("input.title", { defaultValue: "Potato Farm Analytics" })}
             </h1>
             <p className='text-gray-600'>
               {t("input.subtitle", {
@@ -235,12 +228,13 @@ export default function InputPage() {
                 <div className='ml-3'>
                   <p className='font-medium'>
                     {t("input.success", {
-                      defaultValue: "Success! Redirecting to results…",
+                      defaultValue: "Success! Your data has been submitted.",
                     })}
                   </p>
                   <p className='text-sm'>
                     {t("input.successHint", {
-                      defaultValue: "If not redirected, click Predict again.",
+                      defaultValue:
+                        "In the actual app, you would be redirected to the results page.",
                     })}
                   </p>
                 </div>
@@ -265,6 +259,7 @@ export default function InputPage() {
                   defaultValue: "Season & Location",
                 })}
               </h2>
+
               <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
                 {/* Season */}
                 <div>
@@ -315,7 +310,7 @@ export default function InputPage() {
                     </option>
                     {districts.map((d) => (
                       <option key={d.value} value={d.value}>
-                        {t(d.key)}
+                        {t(d.key, { defaultValue: d.value })}
                       </option>
                     ))}
                   </select>
@@ -366,36 +361,7 @@ export default function InputPage() {
                   )}
                 </div>
 
-                {/* Variety */}
-                <div>
-                  <label className='block text-sm font-medium text-gray-700 mb-2'>
-                    {t("label.variety", { defaultValue: "Potato Variety" })} *
-                  </label>
-                  <select
-                    name='potato_variety'
-                    value={form.potato_variety}
-                    onChange={handleChange}
-                    className={`w-full border ${
-                      errors.potato_variety
-                        ? "border-red-500"
-                        : "border-gray-300"
-                    } rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white`}
-                  >
-                    <option value=''>
-                      {t("select.variety", { defaultValue: "Select Variety" })}
-                    </option>
-                    {varieties.map((v) => (
-                      <option key={v.value} value={v.value}>
-                        {t(v.key)}
-                      </option>
-                    ))}
-                  </select>
-                  {errors.potato_variety && (
-                    <p className='text-red-500 text-xs mt-1'>
-                      {errors.potato_variety}
-                    </p>
-                  )}
-                </div>
+              
 
                 {/* Soil */}
                 <div>
@@ -583,7 +549,6 @@ export default function InputPage() {
               </div>
             </div>
 
-            {/* Submit */}
             <button
               onClick={submit}
               className='w-full bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 text-white font-semibold py-4 px-6 rounded-xl shadow-lg transform transition hover:scale-105 focus:outline-none focus:ring-4 focus:ring-green-300'

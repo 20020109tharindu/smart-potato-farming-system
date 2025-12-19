@@ -12,7 +12,7 @@
   "dashboard.status": "තත්ත්වය",
   "dashboard.active": "සක්‍රීයයි",
   "dashboard.footer": "උසස් යන්ත්‍ර අධ්‍යයන ආකෘති බලයෙන් | ශ්‍රී ලංකා අර්තාපල් ගොවීන් සඳහා නිර්මාණය",
-  "dashboard.title": "අර්තාපල් ගොවිපල විශ්ලේෂණ පුවරුව",
+  "dashboard.title": "අර්තාපල් විශ්ලේෂණ පුවරුව",
 
   "dashboard.stats.datasets": "දත්ත කට්ටල",
   "dashboard.stats.scenariosRun": "ධාවිත කළ තත්ත්ව",

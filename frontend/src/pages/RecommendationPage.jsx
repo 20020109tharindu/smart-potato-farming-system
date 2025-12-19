@@ -1,11 +1,14 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import LanguageSwitcher from "../components/LanguageSwitcher.jsx";
 
 export default function RecommendationPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { t } = useTranslation();
+  const { i18n } = useTranslation();
+  <p className='text-xs opacity-60'>lang: {i18n.language}</p>;
 
   const [form, setForm] = useState(null);
   const [strategies, setStrategies] = useState([]);
@@ -13,8 +16,7 @@ export default function RecommendationPage() {
   const [selectedStrategy, setSelectedStrategy] = useState(null);
 
   useEffect(() => {
-    // Prefer data from navigation state or sessionStorage; fallback to mock
-    const t = setTimeout(() => {
+    const timer = setTimeout(() => {
       const fromState = location.state?.form;
       const fromStorage = sessionStorage.getItem("lastForm");
       const parsedStorage = fromStorage ? JSON.parse(fromStorage) : null;
@@ -34,7 +36,6 @@ export default function RecommendationPage() {
 
       const data = fromState || parsedStorage || mockData;
       setForm(data);
-
       if (!data) {
         setLoading(false);
         return;
@@ -42,34 +43,56 @@ export default function RecommendationPage() {
 
       const options = [
         {
-          name: "Premium Strategy - Granola",
-          seedAmount: "60kg",
+          name: t("reco.premiumName", {
+            defaultValue: "Premium Strategy - Granola",
+          }),
+          seedAmount: t("reco.seedAmt60", { defaultValue: "60kg" }),
           cost: 55000,
           yield: 3100,
-          description: "High-quality variety with excellent market value",
+          description: t("reco.premiumDesc", {
+            defaultValue: "High-quality variety with excellent market value",
+          }),
           benefits: [
-            "Best market price",
-            "Disease resistant",
-            "Long shelf life",
+            t("reco.benefit.bestPrice", { defaultValue: "Best market price" }),
+            t("reco.benefit.diseaseRes", { defaultValue: "Disease resistant" }),
+            t("reco.benefit.shelf", { defaultValue: "Long shelf life" }),
           ],
           icon: "🌟",
         },
         {
-          name: "Balanced Strategy - Kufri",
-          seedAmount: "40kg",
+          name: t("reco.balancedName", {
+            defaultValue: "Balanced Strategy - Kufri",
+          }),
+          seedAmount: t("reco.seedAmt40", { defaultValue: "40kg" }),
           cost: 48000,
           yield: 2800,
-          description: "Reliable variety with consistent yields",
-          benefits: ["Good resistance", "Moderate cost", "Proven results"],
+          description: t("reco.balancedDesc", {
+            defaultValue: "Reliable variety with consistent yields",
+          }),
+          benefits: [
+            t("reco.benefit.goodRes", { defaultValue: "Good resistance" }),
+            t("reco.benefit.moderateCost", { defaultValue: "Moderate cost" }),
+            t("reco.benefit.proven", { defaultValue: "Proven results" }),
+          ],
           icon: "⚖️",
         },
         {
-          name: "Budget Strategy - Local",
-          seedAmount: "30kg",
+          name: t("reco.budgetName", {
+            defaultValue: "Budget Strategy - Local",
+          }),
+          seedAmount: t("reco.seedAmt30", { defaultValue: "30kg" }),
           cost: 42000,
           yield: 2400,
-          description: "Cost-effective option for small budgets",
-          benefits: ["Lowest investment", "Local adaptation", "Quick ROI"],
+          description: t("reco.budgetDesc", {
+            defaultValue: "Cost-effective option for small budgets",
+          }),
+          benefits: [
+            t("reco.benefit.lowestInvest", {
+              defaultValue: "Lowest investment",
+            }),
+            t("reco.benefit.localAdapt", { defaultValue: "Local adaptation" }),
+            t("reco.benefit.quickROI", { defaultValue: "Quick ROI" }),
+          ],
           icon: "💰",
         },
       ];
@@ -77,37 +100,36 @@ export default function RecommendationPage() {
       const money = Number(data.hands_on_money_lkr);
       const filtered = options.filter((o) => o.cost <= money);
 
-      const enrichedStrategies = filtered.map((strategy) => {
-        const marketPrice = 180; // LKR per kg (example)
+      const enriched = filtered.map((strategy) => {
+        const marketPrice = 180;
         const revenue = strategy.yield * marketPrice;
         const profit = revenue - strategy.cost;
         const roi = ((profit / strategy.cost) * 100).toFixed(1);
         return { ...strategy, revenue, profit, roi, marketPrice };
       });
 
-      setStrategies(enrichedStrategies);
+      setStrategies(enriched);
       setLoading(false);
-    }, 800);
+    }, 400);
 
-    return () => clearTimeout(t);
-  }, [location.state]);
+    return () => clearTimeout(timer);
+  }, [location.state, t]);
 
-  // ✅ Navigate to Results page
   const handleBackToResults = () => {
     navigate("/results", { state: { from: "recommendations", form } });
   };
-
-  // ✅ Navigate to Input page
-  const handleNewPrediction = () => {
-    navigate("/in");
-  };
+  const handleNewPrediction = () => navigate("/in");
 
   if (loading) {
     return (
       <div className='min-h-screen bg-gradient-to-br from-green-50 to-blue-50 flex items-center justify-center'>
         <div className='text-center'>
           <div className='inline-block animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-green-600 mb-4'></div>
-          <p className='text-gray-600 text-lg'>Generating recommendations...</p>
+          <p className='text-gray-600 text-lg'>
+            {t("reco.loading", {
+              defaultValue: "Generating recommendations...",
+            })}
+          </p>
         </div>
       </div>
     );
@@ -119,17 +141,19 @@ export default function RecommendationPage() {
         <div className='bg-white rounded-2xl shadow-xl p-8 max-w-md text-center'>
           <div className='text-6xl mb-4'>📋</div>
           <h2 className='text-2xl font-bold text-gray-800 mb-3'>
-            No Data Found
+            {t("reco.noData", { defaultValue: "No Data Found" })}
           </h2>
           <p className='text-gray-600 mb-6'>
-            Please complete the input form first to get personalized
-            recommendations.
+            {t("reco.noDataHint", {
+              defaultValue:
+                "Please complete the input form first to get personalized recommendations.",
+            })}
           </p>
           <button
             onClick={handleNewPrediction}
             className='bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 text-white font-semibold py-3 px-6 rounded-xl shadow-lg transform transition hover:scale-105'
           >
-            Go to Input Form
+            {t("reco.gotoInput", { defaultValue: "Go to Input Form" })}
           </button>
         </div>
       </div>
@@ -139,6 +163,11 @@ export default function RecommendationPage() {
   return (
     <div className='min-h-screen bg-gradient-to-br from-green-50 to-blue-50 py-8 px-4'>
       <div className='max-w-6xl mx-auto'>
+        {/* Language */}
+        <div className='flex justify-end mb-4'>
+          <LanguageSwitcher />
+        </div>
+
         {/* Header */}
         <div className='text-center mb-8'>
           <div className='inline-block bg-purple-100 rounded-full p-4 mb-4'>
@@ -157,26 +186,31 @@ export default function RecommendationPage() {
             </svg>
           </div>
           <h1 className='text-4xl font-bold text-gray-800 mb-2'>
-            Smart Recommendations 
+            {t("reco.title", { defaultValue: "Smart Recommendations" })}
           </h1>
           <p className='text-gray-600'>
-            Budget-aware strategies tailored to your available capital
+            {t("reco.subtitle", {
+              defaultValue:
+                "Budget-aware strategies tailored to your available capital",
+            })}
           </p>
         </div>
 
-        {/* Budget Info Card */}
+        {/* Budget Info */}
         <div className='bg-white rounded-2xl shadow-xl p-6 mb-8'>
           <div className='flex items-center justify-between flex-wrap gap-4'>
             <div>
               <p className='text-sm text-gray-600 mb-1'>
-                Your Available Budget
+                {t("reco.budget", { defaultValue: "Your Available Budget" })}
               </p>
               <p className='text-3xl font-bold text-purple-600'>
                 LKR {Number(form.hands_on_money_lkr).toLocaleString()}
               </p>
             </div>
             <div className='text-right'>
-              <p className='text-sm text-gray-600 mb-1'>Strategies Found</p>
+              <p className='text-sm text-gray-600 mb-1'>
+                {t("reco.countLabel", { defaultValue: "Strategies Found" })}
+              </p>
               <p className='text-3xl font-bold text-green-600'>
                 {strategies.length}
               </p>
@@ -184,7 +218,7 @@ export default function RecommendationPage() {
           </div>
         </div>
 
-        {/* No Strategies Message */}
+        {/* No Strategies */}
         {strategies.length === 0 && (
           <div className='bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-6 rounded-lg shadow-md mb-8'>
             <div className='flex items-center'>
@@ -200,17 +234,23 @@ export default function RecommendationPage() {
                 />
               </svg>
               <div>
-                <p className='font-bold'>Insufficient Budget</p>
+                <p className='font-bold'>
+                  {t("reco.insufficient", {
+                    defaultValue: "Insufficient Budget",
+                  })}
+                </p>
                 <p className='text-sm'>
-                  Your available capital is lower than the minimum required.
-                  Consider increasing your budget.
+                  {t("reco.insufficientHint", {
+                    defaultValue:
+                      "Your available capital is lower than the minimum required. Consider increasing your budget.",
+                  })}
                 </p>
               </div>
             </div>
           </div>
         )}
 
-        {/* Strategies Grid */}
+        {/* Strategies */}
         <div className='grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8'>
           {strategies.map((strategy, index) => (
             <div
@@ -241,10 +281,11 @@ export default function RecommendationPage() {
                   {strategy.description}
                 </p>
 
-                {/* Key Metrics */}
                 <div className='space-y-3 mb-4'>
                   <div className='flex justify-between items-center p-3 bg-gray-50 rounded-lg'>
-                    <span className='text-sm text-gray-600'>Investment</span>
+                    <span className='text-sm text-gray-600'>
+                      {t("reco.invest", { defaultValue: "Investment" })}
+                    </span>
                     <span className='font-bold text-gray-800'>
                       LKR {strategy.cost.toLocaleString()}
                     </span>
@@ -252,7 +293,9 @@ export default function RecommendationPage() {
 
                   <div className='flex justify-between items-center p-3 bg-gray-50 rounded-lg'>
                     <span className='text-sm text-gray-600'>
-                      Expected Yield
+                      {t("reco.expectedYield", {
+                        defaultValue: "Expected Yield",
+                      })}
                     </span>
                     <span className='font-bold text-gray-800'>
                       {strategy.yield.toLocaleString()} kg
@@ -260,21 +303,24 @@ export default function RecommendationPage() {
                   </div>
 
                   <div className='flex justify-between items-center p-3 bg-gray-50 rounded-lg'>
-                    <span className='text-sm text-gray-600'>Revenue</span>
+                    <span className='text-sm text-gray-600'>
+                      {t("reco.revenue", { defaultValue: "Revenue" })}
+                    </span>
                     <span className='font-bold text-green-600'>
                       LKR {strategy.revenue.toLocaleString()}
                     </span>
                   </div>
 
                   <div className='flex justify-between items-center p-3 bg-gray-50 rounded-lg'>
-                    <span className='text-sm text-gray-600'>Net Profit</span>
+                    <span className='text-sm text-gray-600'>
+                      {t("reco.netProfit", { defaultValue: "Net Profit" })}
+                    </span>
                     <span className='font-bold text-purple-600'>
                       LKR {strategy.profit.toLocaleString()}
                     </span>
                   </div>
                 </div>
 
-                {/* ROI Badge */}
                 <div className='mb-4'>
                   <div
                     className={`inline-block px-4 py-2 rounded-full text-sm font-bold ${
@@ -285,14 +331,14 @@ export default function RecommendationPage() {
                         : "bg-gray-100 text-gray-700"
                     }`}
                   >
-                    <span className='text-lg'>📈</span> {strategy.roi}% ROI
+                    <span className='text-lg'>📈</span> {strategy.roi}%{" "}
+                    {t("reco.roi", { defaultValue: "ROI" })}
                   </div>
                 </div>
 
-                {/* Benefits List */}
                 <div className='mb-4'>
                   <p className='text-xs font-semibold text-gray-500 uppercase mb-2'>
-                    Key Benefits
+                    {t("reco.keyBenefits", { defaultValue: "Key Benefits" })}
                   </p>
                   <ul className='space-y-2'>
                     {strategy.benefits.map((benefit, i) => (
@@ -317,7 +363,6 @@ export default function RecommendationPage() {
                   </ul>
                 </div>
 
-                {/* Select Button */}
                 <button
                   className={`w-full py-3 rounded-xl font-semibold transition ${
                     selectedStrategy === index
@@ -330,8 +375,8 @@ export default function RecommendationPage() {
                   }}
                 >
                   {selectedStrategy === index
-                    ? "✓ Selected"
-                    : "Select Strategy"}
+                    ? t("reco.selected", { defaultValue: "✓ Selected" })
+                    : t("reco.select", { defaultValue: "Select Strategy" })}
                 </button>
               </div>
             </div>
@@ -343,30 +388,30 @@ export default function RecommendationPage() {
           <div className='bg-white rounded-2xl shadow-xl p-8 mb-8'>
             <h2 className='text-2xl font-bold text-gray-800 mb-6 flex items-center'>
               <span className='text-3xl mr-3'>📊</span>
-              Strategy Comparison
+              {t("reco.comparison", { defaultValue: "Strategy Comparison" })}
             </h2>
 
             <div className='overflow-x-auto'>
               <table className='w-full'>
                 <thead>
-                  <tr className='border-b-2 border-gray-200'>
+                  <tr className='border-b-2 border-gray-2 00'>
                     <th className='text-left py-3 px-4 text-gray-600 font-semibold'>
-                      Strategy
+                      {t("reco.col.strategy", { defaultValue: "Strategy" })}
                     </th>
                     <th className='text-right py-3 px-4 text-gray-600 font-semibold'>
-                      Investment
+                      {t("reco.col.investment", { defaultValue: "Investment" })}
                     </th>
                     <th className='text-right py-3 px-4 text-gray-600 font-semibold'>
-                      Yield
+                      {t("reco.col.yield", { defaultValue: "Yield" })}
                     </th>
                     <th className='text-right py-3 px-4 text-gray-600 font-semibold'>
-                      Revenue
+                      {t("reco.col.revenue", { defaultValue: "Revenue" })}
                     </th>
                     <th className='text-right py-3 px-4 text-gray-600 font-semibold'>
-                      Profit
+                      {t("reco.col.profit", { defaultValue: "Profit" })}
                     </th>
                     <th className='text-right py-3 px-4 text-gray-600 font-semibold'>
-                      ROI
+                      {t("reco.col.roi", { defaultValue: "ROI" })}
                     </th>
                   </tr>
                 </thead>
@@ -422,28 +467,31 @@ export default function RecommendationPage() {
           </div>
         )}
 
-        {/* Action Buttons */}
+        {/* Actions */}
         <div className='flex flex-col sm:flex-row gap-4'>
           <button
             onClick={handleBackToResults}
             className='flex-1 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-4 px-6 rounded-xl shadow-lg transform transition hover:scale-105 focus:outline-none focus:ring-4 focus:ring-blue-300'
           >
-            ← Back to Results
+            ← {t("reco.backToResults", { defaultValue: "Back to Results" })}
           </button>
 
           <button
             onClick={handleNewPrediction}
             className='flex-1 bg-white hover:bg-gray-50 text-gray-800 font-semibold py-4 px-6 rounded-xl shadow-lg border-2 border-gray-300 transform transition hover:scale-105 focus:outline-none focus:ring-4 focus:ring-gray-300'
           >
-            🔄 New Analysis
+            🔄 {t("reco.newAnalysis", { defaultValue: "New Analysis" })}
           </button>
         </div>
 
-        {/* Footer Note */}
         <div className='mt-6 text-center text-gray-600 text-sm'>
           <p>
-            💡 All recommendations are based on your available budget of LKR{" "}
-            {Number(form.hands_on_money_lkr).toLocaleString()}
+            💡{" "}
+            {t("reco.footer", {
+              defaultValue:
+                "All recommendations are based on your available budget.",
+            })}{" "}
+            LKR {Number(form.hands_on_money_lkr).toLocaleString()}
           </p>
         </div>
       </div>

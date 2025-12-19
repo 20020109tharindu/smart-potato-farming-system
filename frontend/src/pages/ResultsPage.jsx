@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { useLocaleFormat } from "../utils/format";
+import LanguageSwitcher from "../components/LanguageSwitcher.jsx";
 
 // Helper function for currency formatting (LKR)
 const formatLKR = (amount) => {
@@ -18,84 +18,68 @@ export default function ResultsPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Simulate loading
-    const t = setTimeout(() => {
-      // In actual app, get from navigation state or sessionStorage
-      const mockForm = {
-        season_type: "0",
-        district: "Nuwara Eliya",
-        field_size_acres: "3",
-        potato_variety: "0",
-        soil_type: "2",
-        planned_fertilizer_kg_per_acre: "150",
-        seed_cost_lkr: "45000",
-        fertilizer_cost_lkr: "30000",
-        labor_cost_lkr: "75000",
-        hands_on_money_lkr: "200000",
-      };
+    // Load from session or mock
+    const stored = sessionStorage.getItem("lastForm");
+    const fromStorage = stored ? JSON.parse(stored) : null;
 
-      setData(mockForm);
+    const mockForm = {
+      season_type: "0",
+      district: "Nuwara Eliya",
+      field_size_acres: "3",
+      potato_variety: "0",
+      soil_type: "2",
+      planned_fertilizer_kg_per_acre: "150",
+      seed_cost_lkr: "45000",
+      fertilizer_cost_lkr: "30000",
+      labor_cost_lkr: "75000",
+      hands_on_money_lkr: "200000",
+    };
 
-      if (!mockForm) {
-        setResult(null);
-        setLoading(false);
-        return;
-      }
+    const formToUse = fromStorage || mockForm;
+    setData(formToUse);
 
-      // --- Calculation Logic ---
-      const fieldSize = Number(mockForm.field_size_acres || 0);
-      const fertilizer = Number(mockForm.planned_fertilizer_kg_per_acre || 0);
-
-      const seedCost = Number(mockForm.seed_cost_lkr || 0);
-      const fertCost = Number(mockForm.fertilizer_cost_lkr || 0);
-      const laborCost = Number(mockForm.labor_cost_lkr || 0);
-      const moneyAtHand = Number(mockForm.hands_on_money_lkr || 0);
-
-      // Predicted selling price (mock)
-      const basePrice = 200;
-      const priceModifier = fieldSize * 2;
-      const predictedPrice = Math.max(160, basePrice - priceModifier); // Min 160
-
-      // Yield (mock)
-      const yieldKg = fieldSize * (1800 + (fertilizer - 50) * 10);
-
-      // Revenue, Cost, Profit
-      const revenue = yieldKg * predictedPrice;
-      const cost = seedCost + fertCost + laborCost;
-      const profit = revenue - cost;
-      const feasible = cost <= moneyAtHand;
-
-      setResult({
-        yieldKg,
-        revenue,
-        cost,
-        profit,
-        feasible,
-        predictedPrice,
-      });
-
+    if (!formToUse) {
+      setResult(null);
       setLoading(false);
-    }, 800);
+      return;
+    }
 
-    return () => clearTimeout(t);
+    // --- Calculation Logic (mock) ---
+    const fieldSize = Number(formToUse.field_size_acres || 0);
+    const fertilizer = Number(formToUse.planned_fertilizer_kg_per_acre || 0);
+    const seedCost = Number(formToUse.seed_cost_lkr || 0);
+    const fertCost = Number(formToUse.fertilizer_cost_lkr || 0);
+    const laborCost = Number(formToUse.labor_cost_lkr || 0);
+    const moneyAtHand = Number(formToUse.hands_on_money_lkr || 0);
+
+    const basePrice = 200;
+    const priceModifier = fieldSize * 2;
+    const predictedPrice = Math.max(160, basePrice - priceModifier);
+
+    const yieldKg = fieldSize * (1800 + (fertilizer - 50) * 10);
+    const revenue = yieldKg * predictedPrice;
+    const cost = seedCost + fertCost + laborCost;
+    const profit = revenue - cost;
+    const feasible = cost <= moneyAtHand;
+
+    setResult({ yieldKg, revenue, cost, profit, feasible, predictedPrice });
+    setLoading(false);
   }, []);
 
-  // ✅ Navigate to Input page
-  const handleNewPrediction = () => {
-    navigate("/in");
-  };
-
-  // ✅ Navigate to Recommendations page (and pass state if you want)
-  const handleViewRecommendations = () => {
+  const handleNewPrediction = () => navigate("/in");
+  const handleViewRecommendations = () =>
     navigate("/recommendations", { state: { data, result } });
-  };
 
   if (loading) {
     return (
       <div className='min-h-screen bg-gradient-to-br from-green-50 to-blue-50 flex items-center justify-center'>
         <div className='text-center'>
           <div className='inline-block animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-green-600 mb-4'></div>
-          <p className='text-gray-600 text-lg'>Analyzing your farm data...</p>
+          <p className='text-gray-600 text-lg'>
+            {t("results.loading", {
+              defaultValue: "Analyzing your farm data...",
+            })}
+          </p>
         </div>
       </div>
     );
@@ -107,17 +91,19 @@ export default function ResultsPage() {
         <div className='bg-white rounded-2xl shadow-xl p-8 max-w-md text-center'>
           <div className='text-6xl mb-4'>📋</div>
           <h2 className='text-2xl font-bold text-gray-800 mb-3'>
-            No Data Found
+            {t("results.noData", { defaultValue: "No Data Found" })}
           </h2>
           <p className='text-gray-600 mb-6'>
-            Please fill out the input form first to get your yield and profit
-            predictions.
+            {t("results.noDataHint", {
+              defaultValue:
+                "Please fill out the input form first to get your yield and profit predictions.",
+            })}
           </p>
           <button
             onClick={handleNewPrediction}
             className='bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 text-white font-semibold py-3 px-6 rounded-xl shadow-lg transform transition hover:scale-105'
           >
-            Go to Input Form
+            {t("results.gotoInput", { defaultValue: "Go to Input Form" })}
           </button>
         </div>
       </div>
@@ -133,6 +119,11 @@ export default function ResultsPage() {
   return (
     <div className='min-h-screen bg-gradient-to-br from-green-50 to-blue-50 py-8 px-4'>
       <div className='max-w-5xl mx-auto'>
+        {/* Language */}
+        <div className='flex justify-end mb-4'>
+          <LanguageSwitcher />
+        </div>
+
         {/* Header */}
         <div className='text-center mb-8'>
           <div className='inline-block bg-green-100 rounded-full p-4 mb-4'>
@@ -151,10 +142,12 @@ export default function ResultsPage() {
             </svg>
           </div>
           <h1 className='text-4xl font-bold text-gray-800 mb-2'>
-            Prediction Results
+            {t("results.title", { defaultValue: "Prediction Results" })}
           </h1>
           <p className='text-gray-600'>
-            Here's your estimated yield and profit analysis
+            {t("results.subtitle", {
+              defaultValue: "Here's your estimated yield and profit analysis",
+            })}
           </p>
         </div>
 
@@ -174,9 +167,16 @@ export default function ResultsPage() {
                 />
               </svg>
               <div>
-                <p className='font-bold'>✅ Feasible Plan</p>
+                <p className='font-bold'>
+                  {t("results.feasibleTitle", {
+                    defaultValue: "✅ Feasible Plan",
+                  })}
+                </p>
                 <p className='text-sm'>
-                  Your available capital is sufficient to cover all costs!
+                  {t("results.feasibleText", {
+                    defaultValue:
+                      "Your available capital is sufficient to cover all costs!",
+                  })}
                 </p>
               </div>
             </div>
@@ -196,32 +196,43 @@ export default function ResultsPage() {
                 />
               </svg>
               <div>
-                <p className='font-bold'>⚠️ Not Feasible</p>
+                <p className='font-bold'>
+                  {t("results.notFeasibleTitle", {
+                    defaultValue: "⚠️ Not Feasible",
+                  })}
+                </p>
                 <p className='text-sm'>
-                  Your available capital may not be sufficient. Consider
-                  reducing costs or increasing budget.
+                  {t("results.notFeasibleText", {
+                    defaultValue:
+                      "Your available capital may not be sufficient. Consider reducing costs or increasing budget.",
+                  })}
                 </p>
               </div>
             </div>
           </div>
         )}
 
-        {/* Key Metrics (5 cards) */}
+        {/* Key Metrics */}
         <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mb-6'>
           {/* Estimated Yield */}
           <div className='bg-white rounded-xl shadow-lg p-6 border-t-4 border-blue-500 transform transition hover:scale-105'>
             <div className='flex items-center justify-between mb-2'>
               <span className='text-3xl'>🌾</span>
               <span className='text-xs font-semibold text-gray-500 uppercase'>
-                Estimated Yield
+                {t("results.cards.estimatedYield", {
+                  defaultValue: "Estimated Yield",
+                })}
               </span>
             </div>
             <p className='text-3xl font-bold text-gray-800'>
               {result.yieldKg.toLocaleString()}
             </p>
-            <p className='text-sm text-gray-600'>kg total</p>
+            <p className='text-sm text-gray-600'>
+              {t("results.cards.kgTotal", { defaultValue: "kg total" })}
+            </p>
             <p className='text-xs text-gray-500 mt-1'>
-              {yieldPerAcre.toFixed(0)} kg/acre
+              {yieldPerAcre.toFixed(0)}{" "}
+              {t("results.cards.kgAcre", { defaultValue: "kg/acre" })}
             </p>
           </div>
 
@@ -230,15 +241,21 @@ export default function ResultsPage() {
             <div className='flex items-center justify-between mb-2'>
               <span className='text-3xl'>🏷️</span>
               <span className='text-xs font-semibold text-gray-500 uppercase'>
-                Selling Price
+                {t("results.cards.sellingPrice", {
+                  defaultValue: "Selling Price",
+                })}
               </span>
             </div>
             <p className='text-3xl font-bold text-yellow-600'>
               {formatLKR(result.predictedPrice)}
             </p>
-            <p className='text-sm text-gray-600'>Per kg (Estimated)</p>
+            <p className='text-sm text-gray-600'>
+              {t("results.cards.perKg", { defaultValue: "Per kg (Estimated)" })}
+            </p>
             <p className='text-xs text-gray-500 mt-1'>
-              Based on market analysis
+              {t("results.cards.marketBased", {
+                defaultValue: "Based on market analysis",
+              })}
             </p>
           </div>
 
@@ -247,13 +264,17 @@ export default function ResultsPage() {
             <div className='flex items-center justify-between mb-2'>
               <span className='text-3xl'>💵</span>
               <span className='text-xs font-semibold text-gray-500 uppercase'>
-                Revenue
+                {t("results.cards.revenue", { defaultValue: "Revenue" })}
               </span>
             </div>
             <p className='text-3xl font-bold text-green-600'>
               {formatLKR(result.revenue)}
             </p>
-            <p className='text-sm text-gray-600'>Expected income</p>
+            <p className='text-sm text-gray-600'>
+              {t("results.cards.expectedIncome", {
+                defaultValue: "Expected income",
+              })}
+            </p>
             <p className='text-xs text-gray-500 mt-1'>
               @ {formatLKR(result.predictedPrice)}/kg
             </p>
@@ -264,15 +285,20 @@ export default function ResultsPage() {
             <div className='flex items-center justify-between mb-2'>
               <span className='text-3xl'>💰</span>
               <span className='text-xs font-semibold text-gray-500 uppercase'>
-                Total Cost
+                {t("results.cards.totalCost", { defaultValue: "Total Cost" })}
               </span>
             </div>
             <p className='text-3xl font-bold text-orange-600'>
               {formatLKR(result.cost)}
             </p>
-            <p className='text-sm text-gray-600'>Investment needed</p>
+            <p className='text-sm text-gray-600'>
+              {t("results.cards.investmentNeeded", {
+                defaultValue: "Investment needed",
+              })}
+            </p>
             <p className='text-xs text-gray-500 mt-1'>
-              Capital: {formatLKR(Number(data.hands_on_money_lkr))}
+              {t("results.cards.capital", { defaultValue: "Capital" })}:{" "}
+              {formatLKR(Number(data.hands_on_money_lkr))}
             </p>
           </div>
 
@@ -287,7 +313,7 @@ export default function ResultsPage() {
                 {result.profit >= 0 ? "📈" : "📉"}
               </span>
               <span className='text-xs font-semibold text-gray-500 uppercase'>
-                Net Profit
+                {t("results.cards.netProfit", { defaultValue: "Net Profit" })}
               </span>
             </div>
             <p
@@ -298,7 +324,13 @@ export default function ResultsPage() {
               {formatLKR(result.profit)}
             </p>
             <p className='text-sm text-gray-600'>
-              {result.profit >= 0 ? "Expected profit" : "Expected loss"}
+              {result.profit >= 0
+                ? t("results.cards.expectedProfit", {
+                    defaultValue: "Expected profit",
+                  })
+                : t("results.cards.expectedLoss", {
+                    defaultValue: "Expected loss",
+                  })}
             </p>
             <p
               className={`text-xs mt-1 font-semibold ${
@@ -306,7 +338,8 @@ export default function ResultsPage() {
               }`}
             >
               {profitPercentage >= 0 ? "+" : ""}
-              {profitPercentage.toFixed(1)}% ROI
+              {profitPercentage.toFixed(1)}%{" "}
+              {t("results.cards.roi", { defaultValue: "ROI" })}
             </p>
           </div>
         </div>
@@ -315,14 +348,16 @@ export default function ResultsPage() {
         <div className='bg-white rounded-2xl shadow-xl p-8 mb-6'>
           <h2 className='text-2xl font-bold text-gray-800 mb-6 flex items-center'>
             <span className='text-3xl mr-3'>📊</span>
-            Cost Breakdown
+            {t("results.breakdown.title", { defaultValue: "Cost Breakdown" })}
           </h2>
 
           <div className='space-y-4'>
             <div className='flex items-center justify-between p-4 bg-blue-50 rounded-lg'>
               <div className='flex items-center'>
                 <div className='w-3 h-3 bg-blue-500 rounded-full mr-3'></div>
-                <span className='font-medium text-gray-700'>Seed Cost</span>
+                <span className='font-medium text-gray-700'>
+                  {t("results.breakdown.seed", { defaultValue: "Seed Cost" })}
+                </span>
               </div>
               <span className='text-lg font-semibold text-gray-800'>
                 {formatLKR(Number(data.seed_cost_lkr))}
@@ -333,7 +368,9 @@ export default function ResultsPage() {
               <div className='flex items-center'>
                 <div className='w-3 h-3 bg-green-500 rounded-full mr-3'></div>
                 <span className='font-medium text-gray-700'>
-                  Fertilizer Cost
+                  {t("results.breakdown.fert", {
+                    defaultValue: "Fertilizer Cost",
+                  })}
                 </span>
               </div>
               <span className='text-lg font-semibold text-gray-800'>
@@ -344,7 +381,9 @@ export default function ResultsPage() {
             <div className='flex items-center justify-between p-4 bg-amber-50 rounded-lg'>
               <div className='flex items-center'>
                 <div className='w-3 h-3 bg-amber-500 rounded-full mr-3'></div>
-                <span className='font-medium text-gray-700'>Labor Cost</span>
+                <span className='font-medium text-gray-700'>
+                  {t("results.breakdown.labor", { defaultValue: "Labor Cost" })}
+                </span>
               </div>
               <span className='text-lg font-semibold text-gray-800'>
                 {formatLKR(Number(data.labor_cost_lkr))}
@@ -354,7 +393,9 @@ export default function ResultsPage() {
             <div className='border-t-2 border-gray-200 pt-4 mt-4'>
               <div className='flex items-center justify-between p-4 bg-gray-100 rounded-lg'>
                 <span className='font-bold text-gray-800 text-lg'>
-                  Total Investment
+                  {t("results.breakdown.totalInvest", {
+                    defaultValue: "Total Investment",
+                  })}
                 </span>
                 <span className='text-2xl font-bold text-gray-800'>
                   {formatLKR(result.cost)}
@@ -364,7 +405,9 @@ export default function ResultsPage() {
 
             <div className='flex items-center justify-between p-4 bg-purple-50 rounded-lg border-2 border-purple-200'>
               <span className='font-bold text-gray-800 text-lg'>
-                Available Capital
+                {t("results.breakdown.capital", {
+                  defaultValue: "Available Capital",
+                })}
               </span>
               <span className='text-2xl font-bold text-purple-600'>
                 {formatLKR(Number(data.hands_on_money_lkr))}
@@ -374,7 +417,9 @@ export default function ResultsPage() {
             {!result.feasible && (
               <div className='p-4 bg-red-50 rounded-lg border border-red-200'>
                 <p className='text-red-700 font-medium'>
-                  ⚠️ Additional funding needed:{" "}
+                  {t("results.breakdown.needMore", {
+                    defaultValue: "⚠️ Additional funding needed:",
+                  })}{" "}
                   {formatLKR(result.cost - Number(data.hands_on_money_lkr))}
                 </p>
               </div>
@@ -386,33 +431,46 @@ export default function ResultsPage() {
         <div className='bg-white rounded-2xl shadow-xl p-8 mb-6'>
           <h2 className='text-2xl font-bold text-gray-800 mb-6 flex items-center'>
             <span className='text-3xl mr-3'>🚜</span>
-            Farm Information
+            {t("results.farm.title", { defaultValue: "Farm Information" })}
           </h2>
 
           <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
             <div className='p-4 bg-gray-50 rounded-lg'>
-              <p className='text-sm text-gray-600 mb-1'>District</p>
+              <p className='text-sm text-gray-600 mb-1'>
+                {t("results.farm.district", { defaultValue: "District" })}
+              </p>
               <p className='text-lg font-semibold text-gray-800'>
                 {data.district}
               </p>
             </div>
 
             <div className='p-4 bg-gray-50 rounded-lg'>
-              <p className='text-sm text-gray-600 mb-1'>Field Size</p>
+              <p className='text-sm text-gray-600 mb-1'>
+                {t("results.farm.fieldSize", { defaultValue: "Field Size" })}
+              </p>
               <p className='text-lg font-semibold text-gray-800'>
-                {data.field_size_acres} acres
+                {data.field_size_acres}{" "}
+                {t("results.farm.acres", { defaultValue: "acres" })}
               </p>
             </div>
 
             <div className='p-4 bg-gray-50 rounded-lg'>
-              <p className='text-sm text-gray-600 mb-1'>Season</p>
+              <p className='text-sm text-gray-600 mb-1'>
+                {t("results.farm.season", { defaultValue: "Season" })}
+              </p>
               <p className='text-lg font-semibold text-gray-800'>
-                {data.season_type === "0" ? "Maha" : "Yala"}
+                {data.season_type === "0"
+                  ? t("season.maha", { defaultValue: "Maha" })
+                  : t("season.yala", { defaultValue: "Yala" })}
               </p>
             </div>
 
             <div className='p-4 bg-gray-50 rounded-lg'>
-              <p className='text-sm text-gray-600 mb-1'>Fertilizer Planned</p>
+              <p className='text-sm text-gray-600 mb-1'>
+                {t("results.farm.fertilizer", {
+                  defaultValue: "Fertilizer Planned",
+                })}
+              </p>
               <p className='text-lg font-semibold text-gray-800'>
                 {data.planned_fertilizer_kg_per_acre} kg/acre
               </p>
@@ -426,21 +484,27 @@ export default function ResultsPage() {
             onClick={handleViewRecommendations}
             className='flex-1 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-4 px-6 rounded-xl shadow-lg transform transition hover:scale-105 focus:outline-none focus:ring-4 focus:ring-blue-300'
           >
-            📋 View Recommendations
+            📋{" "}
+            {t("results.viewRecommendations", {
+              defaultValue: "View Recommendations",
+            })}
           </button>
 
           <button
             onClick={handleNewPrediction}
             className='flex-1 bg-white hover:bg-gray-50 text-gray-800 font-semibold py-4 px-6 rounded-xl shadow-lg border-2 border-gray-300 transform transition hover:scale-105 focus:outline-none focus:ring-4 focus:ring-gray-300'
           >
-            🔄 New Prediction
+            🔄 {t("results.newPrediction", { defaultValue: "New Prediction" })}
           </button>
         </div>
 
         <div className='mt-6 text-center text-gray-600 text-sm'>
           <p>
-            💡 These predictions are estimates based on your input data and
-            historical trends.
+            💡{" "}
+            {t("results.note", {
+              defaultValue:
+                "These predictions are estimates based on your input data and historical trends.",
+            })}
           </p>
         </div>
       </div>

@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 
 import Dashboard from "../src/pages/Dashboard";
@@ -19,7 +19,7 @@ function App() {
 
   return (
     <BrowserRouter>
-      {/* Top header with backend status*/}
+      {/* Top header with backend status */}
       <div className='w-full bg-white shadow-md p-4 mb-6'>
         <h1 className='text-2xl font-bold text-green-700 text-center'>
           Smart Potato Farming System
@@ -32,10 +32,21 @@ function App() {
 
       {/* Page routing */}
       <Routes>
-        <Route path='/in' element={<InputPage />} />
-        <Route path='/res' element={<ResultsPage />} />
-        <Route path='/re' element={<RecommendationPage />} />
+        {/* match what your buttons/links use */}
         <Route path='/' element={<Dashboard />} />
+        <Route path='/in' element={<InputPage />} />
+        <Route path='/results' element={<ResultsPage />} />
+        <Route path='/recommendations' element={<RecommendationPage />} />
+
+        {/* legacy short paths → redirect to the new ones */}
+        <Route path='/res' element={<Navigate to='/results' replace />} />
+        <Route
+          path='/re'
+          element={<Navigate to='/recommendations' replace />}
+        />
+
+        {/* fallback: anything unknown goes home */}
+        <Route path='*' element={<Navigate to='/' replace />} />
       </Routes>
     </BrowserRouter>
   );
