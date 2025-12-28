@@ -1,6 +1,10 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 
 export default function InputPage() {
+  const fileInputRef = useRef(null);
+  const [seedImage, setSeedImage] = useState(null);
+  const [seedImagePreview, setSeedImagePreview] = useState(null);
+
   const [form, setForm] = useState({
     season_type: "",
     district: "",
@@ -155,6 +159,49 @@ export default function InputPage() {
     });
     setErrors({});
     setSubmitted(false);
+    setSeedImage(null);
+    setSeedImagePreview(null);
+  };
+
+  // Handle image selection from camera or gallery
+  const handleImageSelect = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setSeedImage(file);
+      // Create preview
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        setSeedImagePreview(event.target?.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // Trigger camera capture
+  const handleCameraCapture = (e) => {
+    e.preventDefault();
+    if (fileInputRef.current) {
+      fileInputRef.current.setAttribute("capture", "environment");
+      fileInputRef.current.click();
+    }
+  };
+
+  // Trigger gallery upload
+  const handleGalleryUpload = (e) => {
+    e.preventDefault();
+    if (fileInputRef.current) {
+      fileInputRef.current.removeAttribute("capture");
+      fileInputRef.current.click();
+    }
+  };
+
+  // Clear selected image
+  const clearImage = () => {
+    setSeedImage(null);
+    setSeedImagePreview(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
   };
 
   return (
@@ -349,6 +396,79 @@ export default function InputPage() {
                   )}
                 </div>
               </div>
+            </div>
+
+            {/* Seed Readiness Section */}
+            <div className='bg-purple-50 p-6 rounded-xl'>
+              <h2 className='text-xl font-semibold text-purple-800 mb-4'>
+                🌾 Seed Readiness Predictor
+              </h2>
+              <p className='text-gray-600 mb-4 text-sm'>
+                Upload a photo of your seeds to analyze their readiness for planting
+              </p>
+
+              {/* Hidden file input */}
+              <input
+                ref={fileInputRef}
+                type='file'
+                accept='image/*'
+                onChange={handleImageSelect}
+                className='hidden'
+              />
+
+              {/* Upload Buttons */}
+              <div className='flex gap-3 mb-4'>
+                <button
+                  type='button'
+                  onClick={handleCameraCapture}
+                  className='flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg shadow-md transform transition hover:scale-105 focus:outline-none focus:ring-4 focus:ring-blue-300 flex items-center justify-center gap-2'
+                >
+                  📷 Take Photo
+                </button>
+                <button
+                  type='button'
+                  onClick={handleGalleryUpload}
+                  className='flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-4 rounded-lg shadow-md transform transition hover:scale-105 focus:outline-none focus:ring-4 focus:ring-indigo-300 flex items-center justify-center gap-2'
+                >
+                  🖼️ Upload Image
+                </button>
+              </div>
+
+              {/* Image Preview */}
+              {seedImagePreview && (
+                <div className='relative mb-4'>
+                  <div className='bg-white rounded-lg border-2 border-purple-300 p-4'>
+                    <img
+                      src={seedImagePreview}
+                      alt='Seed preview'
+                      className='w-full h-64 object-cover rounded-lg'
+                    />
+                    <div className='mt-4 bg-purple-100 p-3 rounded-lg'>
+                      <p className='text-sm text-purple-700 font-medium'>
+                        📄 File: {seedImage?.name}
+                      </p>
+                      <p className='text-xs text-purple-600'>
+                        Size: {(seedImage?.size || 0 / 1024).toFixed(2)} KB
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type='button'
+                    onClick={clearImage}
+                    className='mt-2 w-full bg-red-100 hover:bg-red-200 text-red-700 font-semibold py-2 px-4 rounded-lg transition focus:outline-none focus:ring-4 focus:ring-red-300'
+                  >
+                    ✕ Clear Image
+                  </button>
+                </div>
+              )}
+
+              {!seedImagePreview && (
+                <div className='bg-white border-2 border-dashed border-purple-300 rounded-lg p-8 text-center'>
+                  <p className='text-gray-500 text-sm'>
+                    📸 No image selected yet. Click a button above to get started!
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* Cost Details Section */}
