@@ -1,3 +1,41 @@
+# Frontend (React + Vite)
+
+This frontend is a React + Vite app. It uses Firebase Authentication for user sign-up and sign-in.
+
+Quick setup:
+
+1. Install dependencies
+
+```powershell
+cd frontend
+npm install
+```
+
+2. Create a Firebase project and enable Email/Password authentication.
+3. Create a `.env` file at the `frontend/` folder with the following variables (replace values):
+
+```
+VITE_FIREBASE_API_KEY=your_api_key
+VITE_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
+VITE_FIREBASE_PROJECT_ID=your_project_id
+VITE_FIREBASE_STORAGE_BUCKET=your_bucket
+VITE_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
+VITE_FIREBASE_APP_ID=your_app_id
+```
+
+4. Run the dev server:
+
+```powershell
+npm run dev
+```
+
+Files added for authentication and layout:
+- `src/firebase.js` — Firebase initialization
+- `src/contexts/AuthContext.jsx` — React context wrapper for auth
+- `src/pages/SignIn.jsx`, `src/pages/SignUp.jsx` — auth pages
+- `src/components/{Header,Sidebar,Footer,Layout}.jsx` — layout and navigation
+
+After starting the dev server you can visit `/signin` or `/signup` to create accounts.
 # React + Vite
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.

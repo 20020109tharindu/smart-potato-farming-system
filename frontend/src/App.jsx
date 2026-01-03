@@ -1,4 +1,15 @@
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { useEffect, useState } from "react";
+
+import Dashboard from "./pages/Dashboard";
+import InputPage from "./pages/InputPage";
+import ResultsPage from "./pages/ResultsPage";
+import RecommendationPage from "./pages/RecommendationPage";
+
+import SignIn from "./pages/SignIn";
+import SignUp from "./pages/SignUp";
+import Landing from "./pages/Landing";
+import Layout from "./components/Layout";
 
 function App() {
   const [backendMessage, setBackendMessage] = useState("Loading...");
@@ -11,19 +22,30 @@ function App() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-      <div className="bg-white shadow-lg rounded-2xl p-8 max-w-xl w-full">
-        <h1 className="text-3xl font-bold mb-4 text-green-700">
-          Smart Potato Farming System
-        </h1>
-        <p className="mb-2 text-gray-700">
-          Frontend: React + Vite + TailwindCSS
-        </p>
-        <p className="text-gray-700">
-          Backend status: <span className="font-semibold">{backendMessage}</span>
-        </p>
-      </div>
-    </div>
+    <BrowserRouter>
+      <Routes>
+        {/* Public */}
+        <Route path='/' element={<Landing />} />
+        <Route path='/signin' element={<SignIn />} />
+        <Route path='/signup' element={<SignUp />} />
+
+        {/* Protected */}
+        <Route path='/app' element={<Layout />}>
+          {/* Empty routes (no dashboard) */}
+          <Route path='seed-readiness' element={null} />
+          <Route path='soil-health' element={null} />
+          <Route path='disease' element={null} />
+
+          {/* COST ANALYSIS ONLY */}
+          <Route path='cost'>
+            <Route index element={<Dashboard />} />
+            <Route path='in' element={<InputPage />} />
+            <Route path='results' element={<ResultsPage />} />
+            <Route path='recommendations' element={<RecommendationPage />} />
+          </Route>
+        </Route>
+      </Routes>
+    </BrowserRouter>
   );
 }
 
