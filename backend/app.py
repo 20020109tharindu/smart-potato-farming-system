@@ -95,31 +95,54 @@ def calculate_disease_severity(image_array):
         large_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (15, 15))
         leaf_mask_filled = cv2.morphologyEx(leaf_mask, cv2.MORPH_CLOSE, large_kernel)
         
-        # Diseased region detection (brown/dark lesions on leaves)
-        # Potato late blight creates dark brown/black necrotic lesions
+        # Diseased region detection - optimized for dark brown holes
         
-        # Dark brown lesions (H: 0-20, low saturation, medium-low value)
-        lower_brown1 = np.array([0, 10, 30])
-        upper_brown1 = np.array([20, 150, 180])
-        brown_mask1 = cv2.inRange(hsv, lower_brown1, upper_brown1)
+        # Convert to LAB color space for better brown detection
+        lab = cv2.cvtColor(image_array, cv2.COLOR_BGR2LAB)
+        l, a, b = cv2.split(lab)
         
-        # Reddish-brown lesions (H: 160-180)
-        lower_brown2 = np.array([160, 20, 40])
-        upper_brown2 = np.array([180, 200, 200])
-        brown_mask2 = cv2.inRange(hsv, lower_brown2, upper_brown2)
+        # Dark brown lesions in LAB: Low L, high A (red), moderate B (yellow)
+        # Expanded range to capture darker browns
+        dark_brown_lab = cv2.inRange(lab, np.array([15, 130, 125]), np.array([100, 185, 175]))
         
-        # Olive/dark lesions (H: 20-40, medium saturation)
-        lower_olive = np.array([20, 30, 40])
-        upper_olive = np.array([40, 180, 160])
-        olive_mask = cv2.inRange(hsv, lower_olive, upper_olive)
+        # Medium brown lesions in LAB
+        med_brown_lab = cv2.inRange(lab, np.array([35, 135, 128]), np.array([130, 175, 170]))
         
-        # Combine all diseased regions
-        diseased_mask = cv2.bitwise_or(brown_mask1, brown_mask2)
-        diseased_mask = cv2.bitwise_or(diseased_mask, olive_mask)
+        # HSV-based detection (multiple ranges for comprehensive coverage)
+        # Very dark brown/black necrotic spots (expanded value range)
+        lower_dark_brown = np.array([0, 35, 10])
+        upper_dark_brown = np.array([28, 255, 120])
+        dark_brown_mask = cv2.inRange(hsv, lower_dark_brown, upper_dark_brown)
         
-        # Remove small noise and fill small gaps in disease regions
+        # Medium brown lesions (wider hue range)
+        lower_med_brown = np.array([8, 50, 25])
+        upper_med_brown = np.array([25, 245, 155])
+        med_brown_mask = cv2.inRange(hsv, lower_med_brown, upper_med_brown)
+        
+        # Yellow-brown mixed areas
+        lower_yellow_brown = np.array([18, 60, 65])
+        upper_yellow_brown = np.array([38, 255, 210])
+        yellow_brown_mask = cv2.inRange(hsv, lower_yellow_brown, upper_yellow_brown)
+        
+        # Grayish dead tissue (expanded for better coverage)
+        lower_gray_dead = np.array([0, 0, 35])
+        upper_gray_dead = np.array([180, 40, 135])
+        gray_dead_mask = cv2.inRange(hsv, lower_gray_dead, upper_gray_dead)
+        
+        # Combine all disease detection methods with proper weighting
+        # LAB color space results get priority for brown detection
+        diseased_mask = cv2.bitwise_or(dark_brown_lab, med_brown_lab)
+        diseased_mask = cv2.bitwise_or(diseased_mask, dark_brown_mask)
+        diseased_mask = cv2.bitwise_or(diseased_mask, med_brown_mask)
+        diseased_mask = cv2.bitwise_or(diseased_mask, yellow_brown_mask)
+        diseased_mask = cv2.bitwise_or(diseased_mask, gray_dead_mask)
+        
+        # Remove very small noise spots but keep lesions
+        tiny_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2, 2))
+        diseased_mask = cv2.morphologyEx(diseased_mask, cv2.MORPH_OPEN, tiny_kernel)
+        
+        # Fill small gaps within lesions
         diseased_mask = cv2.morphologyEx(diseased_mask, cv2.MORPH_CLOSE, kernel)
-        diseased_mask = cv2.morphologyEx(diseased_mask, cv2.MORPH_OPEN, kernel)
         
         # Only count diseased pixels within filled leaf area (without small holes)
         # This ensures we only detect disease on the leaf, not background
@@ -136,25 +159,23 @@ def calculate_disease_severity(image_array):
             severity_percentage = min(100, max(0, severity_percentage))  # Clamp between 0-100
         
         # Create visualization images
-        # 1. Leaf area visualization (green) - use filled mask
-        leaf_viz = cv2.cvtColor(leaf_mask_filled, cv2.COLOR_GRAY2BGR)
-        leaf_viz[:, :, 1] = 0  # Remove green
-        leaf_viz[:, :, 2] = 0  # Remove red
-        leaf_viz[:, :, 0] = leaf_mask_filled  # Keep only blue channel -> GREEN in BGR
-        # Actually, let's do it correctly for BGR format
-        leaf_viz = np.zeros_like(image_array)
-        leaf_viz[:, :, 1] = leaf_mask_filled  # Green channel (G in BGR)
+        # 1. Leaf area visualization - original uploaded image
+        leaf_viz = image_array.copy()
         
-        # 2. Disease area visualization (red)
-        disease_viz = np.zeros_like(image_array)
-        disease_viz[:, :, 2] = valid_disease_mask  # Red channel (R in BGR)
+        # 2. Disease area visualization - show only diseased spots in red on white background
+        disease_viz = np.ones_like(image_array, dtype=np.uint8) * 255  # White background
+        disease_viz[valid_disease_mask > 0] = [0, 0, 255]  # Red for disease (BGR format)
         
-        # 3. Combined visualization (green leaf + red disease)
+        # 3. Combined visualization - original image with red overlay on diseased areas only
         combined_viz = image_array.copy()
-        # Highlight leaf area in green overlay
-        combined_viz[leaf_mask_filled > 0] = [0, 150, 0]  # Green in BGR
-        # Highlight disease area in red overlay (overwrites green)
-        combined_viz[valid_disease_mask > 0] = [0, 0, 255]  # Red in BGR
+        # Apply red overlay on diseased areas with 50% transparency
+        red_color = np.array([0, 0, 255], dtype=np.uint8)
+        for i in range(3):  # BGR channels
+            combined_viz[:, :, i] = np.where(
+                valid_disease_mask > 0,
+                (image_array[:, :, i] * 0.5 + red_color[i] * 0.5).astype(np.uint8),
+                image_array[:, :, i]
+            )
         
         return {
             'severity_percentage': severity_percentage,
