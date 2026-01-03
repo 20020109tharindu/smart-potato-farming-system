@@ -5,6 +5,7 @@ import Dashboard from "./pages/Dashboard";
 import InputPage from "./pages/InputPage";
 import ResultsPage from "./pages/ResultsPage";
 import RecommendationPage from "./pages/RecommendationPage";
+import DiseasePredictor from "./pages/DiseasePredictor";
 
 import SignIn from "./pages/SignIn";
 import SignUp from "./pages/SignUp";
@@ -31,10 +32,12 @@ function App() {
 
         {/* Protected */}
         <Route path='/app' element={<Layout />}>
+          {/* Disease Predictor */}
+          <Route path='disease' element={<DiseasePredictor />} />
+
           {/* Empty routes (no dashboard) */}
           <Route path='seed-readiness' element={null} />
           <Route path='soil-health' element={null} />
-          <Route path='disease' element={null} />
 
           {/* COST ANALYSIS ONLY */}
           <Route path='cost'>
