@@ -9,6 +9,49 @@ export default function DiseasePredictor() {
   const [error, setError] = useState('')
   const [result, setResult] = useState(null)
 
+  const compressImage = (file, callback) => {
+    const reader = new FileReader()
+    reader.readAsDataURL(file)
+    reader.onload = (event) => {
+      const img = new Image()
+      img.src = event.target.result
+      img.onload = () => {
+        const canvas = document.createElement('canvas')
+        let width = img.width
+        let height = img.height
+        
+        // Reduce size if too large
+        const maxWidth = 800
+        const maxHeight = 800
+        if (width > height) {
+          if (width > maxWidth) {
+            height = Math.round((height * maxWidth) / width)
+            width = maxWidth
+          }
+        } else {
+          if (height > maxHeight) {
+            width = Math.round((width * maxHeight) / height)
+            height = maxHeight
+          }
+        }
+        
+        canvas.width = width
+        canvas.height = height
+        const ctx = canvas.getContext('2d')
+        ctx.drawImage(img, 0, 0, width, height)
+        
+        canvas.toBlob(
+          (blob) => {
+            const compressedFile = new File([blob], file.name, { type: 'image/jpeg' })
+            callback(compressedFile)
+          },
+          'image/jpeg',
+          0.8
+        )
+      }
+    }
+  }
+
   const handleImageChange = (e) => {
     const file = e.target.files[0]
     if (file) {
@@ -20,20 +63,23 @@ export default function DiseasePredictor() {
         return
       }
 
-      // Validate file size (max 5MB)
+      // Validate file size (max 5MB before compression)
       if (file.size > 5 * 1024 * 1024) {
         setError('Image size must be less than 5MB')
         return
       }
 
-      setImage(file)
-      
-      // Create preview
-      const reader = new FileReader()
-      reader.onloadend = () => {
-        setPreview(reader.result)
-      }
-      reader.readAsDataURL(file)
+      // Compress image before storing
+      compressImage(file, (compressedFile) => {
+        setImage(compressedFile)
+        
+        // Create preview
+        const reader = new FileReader()
+        reader.onloadend = () => {
+          setPreview(reader.result)
+        }
+        reader.readAsDataURL(compressedFile)
+      })
     }
   }
 
@@ -79,34 +125,59 @@ export default function DiseasePredictor() {
 
       // Convert image to base64
       const reader = new FileReader()
-      reader.onloadend = async () => {
+      reader.onload = async () => {
         try {
+          console.log('Sending image to backend...')
+          const imageData = reader.result
+          console.log('Image data size:', imageData.length)
+
           const response = await fetch('http://127.0.0.1:5000/api/analyze-leaf', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
+              'Accept': 'application/json',
             },
             body: JSON.stringify({
-              image: reader.result,
+              image: imageData,
             }),
           })
 
-          if (!response.ok) {
-            const errorData = await response.json()
-            throw new Error(errorData.error || 'Analysis failed')
+          console.log('Response status:', response.status)
+          console.log('Response headers:', response.headers)
+
+          const contentType = response.headers.get('content-type')
+          if (!contentType || !contentType.includes('application/json')) {
+            throw new Error(`Expected JSON response, got ${contentType}`)
           }
 
           const data = await response.json()
-          setResult(data)
+          console.log('Response data:', data)
+
+          if (!response.ok) {
+            throw new Error(data.error || `Analysis failed with status ${response.status}`)
+          }
+
+          if (data.success) {
+            setResult(data)
+            setError('')
+          } else {
+            throw new Error(data.error || 'Analysis returned unsuccessful')
+          }
         } catch (err) {
-          setError(err.message || 'Failed to analyze image')
+          console.error('Detailed error:', err)
+          setError(err.message || 'Failed to analyze image. Check browser console for details.')
         } finally {
           setLoading(false)
         }
       }
+      reader.onerror = () => {
+        setError('Failed to read image file')
+        setLoading(false)
+      }
       reader.readAsDataURL(image)
     } catch (err) {
-      setError(err.message)
+      console.error('Error:', err)
+      setError(err.message || 'An error occurred')
       setLoading(false)
     }
   }
@@ -126,7 +197,7 @@ export default function DiseasePredictor() {
 
   return (
     <div className='min-h-screen bg-gradient-to-b from-green-50 to-white p-6'>
-      <div className='max-w-4xl mx-auto'>
+      <div className='max-w-6xl mx-auto'>
         {/* Header */}
         <div className='mb-8'>
           <h1 className='text-3xl font-bold text-green-700 mb-2'>Potato Leaf Disease Predictor</h1>
@@ -134,7 +205,7 @@ export default function DiseasePredictor() {
         </div>
 
         {/* Main Container */}
-        <div className='grid md:grid-cols-2 gap-6'>
+        <div className='grid md:grid-cols-2 gap-6 mb-6'>
           {/* Left - Upload Section */}
           <div className='bg-white rounded-lg shadow-md p-6'>
             <h2 className='text-xl font-bold text-gray-800 mb-4'>Upload Leaf Image</h2>
@@ -257,12 +328,27 @@ export default function DiseasePredictor() {
                   </div>
                 </div>
 
+                {/* Pixel Statistics */}
+                <div className='bg-blue-50 border border-blue-200 rounded-lg p-4'>
+                  <p className='text-sm font-semibold text-gray-700 mb-2'>Area Analysis</p>
+                  <div className='grid grid-cols-2 gap-2 text-sm'>
+                    <div>
+                      <p className='text-gray-600'>Total Leaf Pixels:</p>
+                      <p className='font-bold text-gray-800'>{result.leafPixels?.toLocaleString() || 0}</p>
+                    </div>
+                    <div>
+                      <p className='text-gray-600'>Diseased Pixels:</p>
+                      <p className='font-bold text-red-600'>{result.diseasedPixels?.toLocaleString() || 0}</p>
+                    </div>
+                  </div>
+                </div>
+
                 {/* Recommendation */}
                 {result.recommendation && (
                   <div>
                     <p className='text-sm font-semibold text-gray-600 mb-2'>Fertilizer Recommendation</p>
                     <div className='bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-3'>
-                      <p className='text-gray-700'>{result.recommendation.description}</p>
+                      <p className='text-gray-700 text-sm'>{result.recommendation.description}</p>
                       <div className='grid grid-cols-3 gap-2'>
                         <div className={`${getNutrientColor(result.recommendation.nitrogen)} rounded p-2 text-center`}>
                           <p className='text-xs font-semibold text-gray-600'>Nitrogen</p>
@@ -312,8 +398,64 @@ export default function DiseasePredictor() {
           </div>
         </div>
 
+        {/* Visualization Section */}
+        {result && result.visualizations && (
+          <div className='bg-white rounded-lg shadow-md p-6 mb-6'>
+            <h2 className='text-xl font-bold text-gray-800 mb-4'>Disease Visualization</h2>
+            <div className='grid md:grid-cols-3 gap-4'>
+              {/* Leaf Area */}
+              <div>
+                <p className='text-sm font-semibold text-gray-700 mb-2 text-center'>Leaf Area (Green)</p>
+                {result.visualizations.leafArea ? (
+                  <img
+                    src={result.visualizations.leafArea}
+                    alt='Leaf area'
+                    className='w-full h-64 object-cover rounded-lg border-2 border-green-200'
+                  />
+                ) : (
+                  <div className='w-full h-64 bg-gray-200 rounded-lg flex items-center justify-center'>
+                    <p className='text-gray-500'>No visualization</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Disease Area */}
+              <div>
+                <p className='text-sm font-semibold text-gray-700 mb-2 text-center'>Disease Area (Red)</p>
+                {result.visualizations.diseaseArea ? (
+                  <img
+                    src={result.visualizations.diseaseArea}
+                    alt='Disease area'
+                    className='w-full h-64 object-cover rounded-lg border-2 border-red-200'
+                  />
+                ) : (
+                  <div className='w-full h-64 bg-gray-200 rounded-lg flex items-center justify-center'>
+                    <p className='text-gray-500'>No visualization</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Combined */}
+              <div>
+                <p className='text-sm font-semibold text-gray-700 mb-2 text-center'>Combined Analysis</p>
+                {result.visualizations.combined ? (
+                  <img
+                    src={result.visualizations.combined}
+                    alt='Combined analysis'
+                    className='w-full h-64 object-cover rounded-lg border-2 border-blue-200'
+                  />
+                ) : (
+                  <div className='w-full h-64 bg-gray-200 rounded-lg flex items-center justify-center'>
+                    <p className='text-gray-500'>No visualization</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Info Cards */}
-        <div className='mt-8 grid md:grid-cols-4 gap-4'>
+        <div className='grid md:grid-cols-4 gap-4'>
           <div className='bg-white rounded-lg shadow p-4 border-l-4 border-green-600'>
             <h3 className='font-bold text-green-700 mb-2'>Very Early (0-10%)</h3>
             <p className='text-sm text-gray-600'>Focus on strengthening immunity</p>
