@@ -5,6 +5,7 @@ import Dashboard from "./pages/Dashboard";
 import InputPage from "./pages/InputPage";
 import ResultsPage from "./pages/ResultsPage";
 import RecommendationPage from "./pages/RecommendationPage";
+import SoilHealth from "./pages/SoilHealth";
 
 import SignIn from "./pages/SignIn";
 import SignUp from "./pages/SignUp";
@@ -33,7 +34,7 @@ function App() {
         <Route path='/app' element={<Layout />}>
           {/* Empty routes (no dashboard) */}
           <Route path='seed-readiness' element={null} />
-          <Route path='soil-health' element={null} />
+          <Route path='soil-health' element={<SoilHealth />} />
           <Route path='disease' element={null} />
 
           {/* COST ANALYSIS ONLY */}
