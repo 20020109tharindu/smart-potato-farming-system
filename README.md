@@ -1,1 +1,0 @@
-# smart-potato-farming-system
