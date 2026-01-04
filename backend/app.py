@@ -95,54 +95,47 @@ def calculate_disease_severity(image_array):
         large_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (15, 15))
         leaf_mask_filled = cv2.morphologyEx(leaf_mask, cv2.MORPH_CLOSE, large_kernel)
         
-        # Diseased region detection - optimized for dark brown holes
+        # Diseased region detection - optimized for accurate dark brown hole detection
         
         # Convert to LAB color space for better brown detection
         lab = cv2.cvtColor(image_array, cv2.COLOR_BGR2LAB)
-        l, a, b = cv2.split(lab)
         
-        # Dark brown lesions in LAB: Low L, high A (red), moderate B (yellow)
-        # Expanded range to capture darker browns
-        dark_brown_lab = cv2.inRange(lab, np.array([15, 130, 125]), np.array([100, 185, 175]))
-        
-        # Medium brown lesions in LAB
-        med_brown_lab = cv2.inRange(lab, np.array([35, 135, 128]), np.array([130, 175, 170]))
+        # Brown and dark lesions in LAB space
+        # Target: Low lightness (L), high red component (a), moderate yellow (b)
+        # More aggressive range to capture all brown variations
+        brown_lab = cv2.inRange(lab, np.array([10, 125, 120]), np.array([140, 190, 180]))
         
         # HSV-based detection (multiple ranges for comprehensive coverage)
-        # Very dark brown/black necrotic spots (expanded value range)
-        lower_dark_brown = np.array([0, 35, 10])
-        upper_dark_brown = np.array([28, 255, 120])
+        # Very dark brown/black necrotic spots 
+        lower_dark_brown = np.array([0, 30, 5])
+        upper_dark_brown = np.array([30, 255, 130])
         dark_brown_mask = cv2.inRange(hsv, lower_dark_brown, upper_dark_brown)
         
-        # Medium brown lesions (wider hue range)
-        lower_med_brown = np.array([8, 50, 25])
-        upper_med_brown = np.array([25, 245, 155])
+        # Medium to light brown lesions (expanded)
+        lower_med_brown = np.array([5, 40, 20])
+        upper_med_brown = np.array([30, 255, 170])
         med_brown_mask = cv2.inRange(hsv, lower_med_brown, upper_med_brown)
         
-        # Yellow-brown mixed areas
-        lower_yellow_brown = np.array([18, 60, 65])
-        upper_yellow_brown = np.array([38, 255, 210])
+        # Yellow-brown mixed areas (chlorotic transitions)
+        lower_yellow_brown = np.array([15, 50, 60])
+        upper_yellow_brown = np.array([40, 255, 220])
         yellow_brown_mask = cv2.inRange(hsv, lower_yellow_brown, upper_yellow_brown)
         
-        # Grayish dead tissue (expanded for better coverage)
-        lower_gray_dead = np.array([0, 0, 35])
-        upper_gray_dead = np.array([180, 40, 135])
+        # Grayish/whitish dead tissue (necrotic centers)
+        lower_gray_dead = np.array([0, 0, 30])
+        upper_gray_dead = np.array([180, 50, 140])
         gray_dead_mask = cv2.inRange(hsv, lower_gray_dead, upper_gray_dead)
         
-        # Combine all disease detection methods with proper weighting
-        # LAB color space results get priority for brown detection
-        diseased_mask = cv2.bitwise_or(dark_brown_lab, med_brown_lab)
-        diseased_mask = cv2.bitwise_or(diseased_mask, dark_brown_mask)
+        # Combine all disease detection methods
+        diseased_mask = cv2.bitwise_or(brown_lab, dark_brown_mask)
         diseased_mask = cv2.bitwise_or(diseased_mask, med_brown_mask)
         diseased_mask = cv2.bitwise_or(diseased_mask, yellow_brown_mask)
         diseased_mask = cv2.bitwise_or(diseased_mask, gray_dead_mask)
         
-        # Remove very small noise spots but keep lesions
-        tiny_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2, 2))
-        diseased_mask = cv2.morphologyEx(diseased_mask, cv2.MORPH_OPEN, tiny_kernel)
-        
-        # Fill small gaps within lesions
-        diseased_mask = cv2.morphologyEx(diseased_mask, cv2.MORPH_CLOSE, kernel)
+        # Remove noise while preserving lesion integrity
+        kernel_small = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2, 2))
+        diseased_mask = cv2.morphologyEx(diseased_mask, cv2.MORPH_OPEN, kernel_small)
+        diseased_mask = cv2.morphologyEx(diseased_mask, cv2.MORPH_CLOSE, kernel_small)
         
         # Only count diseased pixels within filled leaf area (without small holes)
         # This ensures we only detect disease on the leaf, not background

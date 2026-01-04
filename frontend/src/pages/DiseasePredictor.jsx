@@ -196,44 +196,62 @@ export default function DiseasePredictor() {
   }
 
   return (
-    <div className='min-h-screen bg-gradient-to-b from-green-50 to-white p-6'>
-      <div className='max-w-6xl mx-auto'>
-        {/* Header */}
-        <div className='mb-8'>
-          <h1 className='text-3xl font-bold text-green-700 mb-2'>Potato Leaf Disease Predictor</h1>
-          <p className='text-gray-600'>Upload a leaf image to analyze disease severity and get fertilizer recommendations</p>
+    <div className='min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50'>
+      {/* Premium Header */}
+      <div className='bg-gradient-to-r from-green-600 via-emerald-600 to-teal-600 text-white shadow-2xl'>
+        <div className='max-w-6xl mx-auto px-6 py-8'>
+          <h1 className='text-4xl font-extrabold mb-2 flex items-center gap-3'>
+            <svg className='w-10 h-10' fill='currentColor' viewBox='0 0 24 24'>
+              <path d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z'/>
+            </svg>
+            Potato Leaf Disease Predictor
+          </h1>
+          <p className='text-emerald-50 text-lg font-light'>Advanced AI-powered disease analysis and fertilizer recommendations</p>
         </div>
+      </div>
 
+      <div className='max-w-6xl mx-auto px-6 py-10'>
         {/* Main Container */}
-        <div className='grid md:grid-cols-2 gap-6 mb-6'>
+        <div className='grid md:grid-cols-2 gap-10 mb-12'>
           {/* Left - Upload Section */}
-          <div className='bg-white rounded-lg shadow-md p-6'>
-            <h2 className='text-xl font-bold text-gray-800 mb-4'>Upload Leaf Image</h2>
+          <div className='bg-white rounded-2xl shadow-xl p-8 border border-gray-100 hover:shadow-2xl transition-shadow duration-300'>
+            <div className='flex items-center gap-3 mb-8'>
+              <div className='bg-gradient-to-br from-green-500 to-emerald-600 p-3 rounded-xl shadow-lg'>
+                <svg className='w-7 h-7 text-white' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+                  <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z' />
+                </svg>
+              </div>
+              <div>
+                <h2 className='text-2xl font-bold text-gray-900'>Upload Leaf</h2>
+                <p className='text-sm text-gray-500'>Select a high-quality image</p>
+              </div>
+            </div>
 
             {/* Image Preview */}
-            <div className='mb-4'>
+            <div className='mb-6'>
               {preview ? (
-                <div className='relative'>
+                <div className='relative group'>
                   <img
                     src={preview}
                     alt='Leaf preview'
-                    className='w-full h-80 object-cover rounded-lg border-2 border-green-200'
+                    className='w-full h-80 object-cover rounded-xl border-2 border-green-200 group-hover:border-green-400 transition-colors'
                   />
+                  <div className='absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 rounded-xl transition-all'></div>
                   <button
                     onClick={() => {
                       setImage(null)
                       setPreview(null)
                     }}
-                    className='absolute top-2 right-2 bg-red-500 text-white px-3 py-1 rounded text-sm hover:bg-red-600'
+                    className='absolute top-3 right-3 bg-red-500 text-white px-3 py-1 rounded-lg text-sm hover:bg-red-600 shadow-lg transition transform hover:scale-105'
                   >
                     Remove
                   </button>
                 </div>
               ) : (
-                <div className='w-full h-80 bg-gray-100 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center'>
+                <div className='w-full h-80 bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl border-3 border-dashed border-gray-300 flex items-center justify-center hover:border-green-400 hover:from-green-50 transition-all'>
                   <div className='text-center'>
                     <svg
-                      className='w-16 h-16 mx-auto text-gray-400 mb-2'
+                      className='w-20 h-20 mx-auto text-gray-400 mb-3'
                       fill='none'
                       stroke='currentColor'
                       viewBox='0 0 24 24'
@@ -241,20 +259,21 @@ export default function DiseasePredictor() {
                       <path
                         strokeLinecap='round'
                         strokeLinejoin='round'
-                        strokeWidth={2}
+                        strokeWidth={1.5}
                         d='M12 4v16m8-8H4'
                       />
                     </svg>
-                    <p className='text-gray-500'>No image selected</p>
+                    <p className='text-gray-600 font-semibold'>Drag image here or click below</p>
+                    <p className='text-gray-400 text-sm mt-1'>PNG, JPG up to 5MB</p>
                   </div>
                 </div>
               )}
             </div>
 
             {/* File Input */}
-            <label className='block mb-4'>
-              <span className='bg-green-600 text-white px-4 py-2 rounded-lg cursor-pointer hover:bg-green-700 inline-block'>
-                Choose Image
+            <label className='block mb-5'>
+              <span className='bg-green-600 text-white px-6 py-3 rounded-lg cursor-pointer hover:bg-green-700 inline-block font-semibold shadow-md hover:shadow-lg transition transform hover:scale-105'>
+                📁 Choose Image
               </span>
               <input
                 type='file'
@@ -267,60 +286,85 @@ export default function DiseasePredictor() {
 
             {/* Error Message */}
             {error && (
-              <div className='bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg mb-4'>
-                {error}
+              <div className='bg-red-50 border-l-4 border-red-500 text-red-700 px-5 py-4 rounded-lg mb-5 flex items-start gap-3 animate-pulse'>
+                <svg className='w-5 h-5 mt-0.5 flex-shrink-0' fill='currentColor' viewBox='0 0 20 20'>
+                  <path fillRule='evenodd' d='M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z' clipRule='evenodd' />
+                </svg>
+                <span>{error}</span>
               </div>
             )}
 
             {/* Action Buttons */}
-            <div className='flex gap-2'>
+            <div className='flex gap-3'>
               <button
                 onClick={handleAnalyze}
                 disabled={!image || loading}
-                className={`flex-1 px-4 py-2 rounded-lg font-semibold transition ${
+                className={`flex-1 px-6 py-3 rounded-lg font-bold transition transform ${
                   loading || !image
                     ? 'bg-gray-300 text-gray-600 cursor-not-allowed'
-                    : 'bg-green-600 text-white hover:bg-green-700'
+                    : 'bg-green-600 text-white hover:bg-green-700 hover:shadow-lg hover:scale-105 active:scale-95'
                 }`}
               >
-                {loading ? 'Analyzing...' : 'Analyze Image'}
+                {loading ? (
+                  <span className='flex items-center justify-center gap-2'>
+                    <svg className='animate-spin h-5 w-5' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+                      <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z' />
+                    </svg>
+                    Analyzing...
+                  </span>
+                ) : (
+                  '🔍 Analyze Image'
+                )}
               </button>
               <button
                 onClick={handleReset}
                 disabled={!image && !result}
-                className={`px-4 py-2 rounded-lg font-semibold transition ${
+                className={`px-6 py-3 rounded-lg font-bold transition transform ${
                   !image && !result
                     ? 'bg-gray-300 text-gray-600 cursor-not-allowed'
-                    : 'bg-gray-600 text-white hover:bg-gray-700'
+                    : 'bg-gray-600 text-white hover:bg-gray-700 hover:shadow-lg hover:scale-105 active:scale-95'
                 }`}
               >
-                Reset
+                ↻ Reset
               </button>
             </div>
           </div>
 
           {/* Right - Results Section */}
-          <div className='bg-white rounded-lg shadow-md p-6'>
-            <h2 className='text-xl font-bold text-gray-800 mb-4'>Analysis Results</h2>
+          <div className='bg-white rounded-xl shadow-lg p-8 border-t-4 border-blue-600'>
+            <div className='flex items-center gap-3 mb-6'>
+              <div className='bg-blue-100 p-3 rounded-lg'>
+                <svg className='w-6 h-6 text-blue-600' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+                  <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M13 10V3L4 14h7v7l9-11h-7z' />
+                </svg>
+              </div>
+              <h2 className='text-2xl font-bold text-gray-800'>Analysis Results</h2>
+            </div>
 
             {result ? (
-              <div className='space-y-4'>
+              <div className='space-y-5'>
                 {/* Severity */}
-                <div>
-                  <p className='text-sm font-semibold text-gray-600 mb-2'>Disease Severity</p>
-                  <div className='bg-gray-100 rounded-lg p-4'>
-                    <div className='flex items-end gap-2'>
-                      <span className='text-3xl font-bold text-green-700'>{result.severity}</span>
-                      <span className='text-gray-600 mb-1'>%</span>
+                <div className='bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-6 border-2 border-green-200'>
+                  <p className='text-sm font-semibold text-gray-600 mb-3 uppercase tracking-wide'>Disease Severity</p>
+                  <div className='flex items-end gap-2'>
+                    <span className='text-5xl font-bold text-green-700'>{result.severity}</span>
+                    <span className='text-2xl text-gray-600 mb-2'>%</span>
+                  </div>
+                  <div className='mt-4 bg-white rounded-lg p-2'>
+                    <div className='w-full bg-gray-200 rounded-full h-3 overflow-hidden'>
+                      <div 
+                        className='bg-gradient-to-r from-green-400 to-green-600 h-full rounded-full transition-all duration-500'
+                        style={{width: `${result.severity}%`}}
+                      ></div>
                     </div>
                   </div>
                 </div>
 
                 {/* Stage Badge */}
                 <div>
-                  <p className='text-sm font-semibold text-gray-600 mb-2'>Disease Stage</p>
+                  <p className='text-sm font-semibold text-gray-600 mb-3 uppercase tracking-wide'>Disease Stage</p>
                   <div
-                    className={`inline-block px-4 py-2 rounded-lg border-2 font-semibold ${getStageColor(
+                    className={`inline-block px-6 py-3 rounded-xl border-2 font-bold text-lg shadow-md ${getStageColor(
                       result.stage
                     )}`}
                   >
@@ -329,39 +373,37 @@ export default function DiseasePredictor() {
                 </div>
 
                 {/* Pixel Statistics */}
-                <div className='bg-blue-50 border border-blue-200 rounded-lg p-4'>
-                  <p className='text-sm font-semibold text-gray-700 mb-2'>Area Analysis</p>
-                  <div className='grid grid-cols-2 gap-2 text-sm'>
-                    <div>
-                      <p className='text-gray-600'>Total Leaf Pixels:</p>
-                      <p className='font-bold text-gray-800'>{result.leafPixels?.toLocaleString() || 0}</p>
+                <div className='bg-gradient-to-r from-blue-50 to-cyan-50 border-2 border-blue-200 rounded-xl p-6'>
+                  <p className='text-sm font-semibold text-gray-700 mb-4 uppercase tracking-wide'>📊 Area Analysis</p>
+                  <div className='grid grid-cols-2 gap-4'>
+                    <div className='bg-white rounded-lg p-4 border-l-4 border-blue-500'>
+                      <p className='text-gray-600 text-sm font-semibold'>Total Leaf Pixels:</p>
+                      <p className='font-bold text-gray-800 text-lg mt-1'>{result.leafPixels?.toLocaleString() || 0}</p>
                     </div>
-                    <div>
-                      <p className='text-gray-600'>Diseased Pixels:</p>
-                      <p className='font-bold text-red-600'>{result.diseasedPixels?.toLocaleString() || 0}</p>
+                    <div className='bg-white rounded-lg p-4 border-l-4 border-red-500'>
+                      <p className='text-gray-600 text-sm font-semibold'>Diseased Pixels:</p>
+                      <p className='font-bold text-red-600 text-lg mt-1'>{result.diseasedPixels?.toLocaleString() || 0}</p>
                     </div>
                   </div>
                 </div>
 
                 {/* Recommendation */}
                 {result.recommendation && (
-                  <div>
-                    <p className='text-sm font-semibold text-gray-600 mb-2'>Fertilizer Recommendation</p>
-                    <div className='bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-3'>
-                      <p className='text-gray-700 text-sm'>{result.recommendation.description}</p>
-                      <div className='grid grid-cols-3 gap-2'>
-                        <div className={`${getNutrientColor(result.recommendation.nitrogen)} rounded p-2 text-center`}>
-                          <p className='text-xs font-semibold text-gray-600'>Nitrogen</p>
-                          <p className='font-bold text-gray-800'>{result.recommendation.nitrogen}</p>
-                        </div>
-                        <div className={`${getNutrientColor(result.recommendation.phosphorus)} rounded p-2 text-center`}>
-                          <p className='text-xs font-semibold text-gray-600'>Phosphorus</p>
-                          <p className='font-bold text-gray-800'>{result.recommendation.phosphorus}</p>
-                        </div>
-                        <div className={`${getNutrientColor(result.recommendation.potassium)} rounded p-2 text-center`}>
-                          <p className='text-xs font-semibold text-gray-600'>Potassium</p>
-                          <p className='font-bold text-gray-800'>{result.recommendation.potassium}</p>
-                        </div>
+                  <div className='bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-200 rounded-xl p-6'>
+                    <p className='text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wide'>💡 Fertilizer Recommendation</p>
+                    <p className='text-gray-700 text-sm mb-4 leading-relaxed'>{result.recommendation.description}</p>
+                    <div className='grid grid-cols-3 gap-3'>
+                      <div className={`${getNutrientColor(result.recommendation.nitrogen)} rounded-lg p-3 text-center border-2 border-yellow-300`}>
+                        <p className='text-xs font-bold text-gray-600 uppercase'>Nitrogen</p>
+                        <p className='font-bold text-gray-800 mt-2 text-lg'>{result.recommendation.nitrogen}</p>
+                      </div>
+                      <div className={`${getNutrientColor(result.recommendation.phosphorus)} rounded-lg p-3 text-center border-2 border-orange-300`}>
+                        <p className='text-xs font-bold text-gray-600 uppercase'>Phosphorus</p>
+                        <p className='font-bold text-gray-800 mt-2 text-lg'>{result.recommendation.phosphorus}</p>
+                      </div>
+                      <div className={`${getNutrientColor(result.recommendation.potassium)} rounded-lg p-3 text-center border-2 border-red-300`}>
+                        <p className='text-xs font-bold text-gray-600 uppercase'>Potassium</p>
+                        <p className='font-bold text-gray-800 mt-2 text-lg'>{result.recommendation.potassium}</p>
                       </div>
                     </div>
                   </div>
@@ -370,8 +412,11 @@ export default function DiseasePredictor() {
                 {/* View Details Button */}
                 <button
                   onClick={handleViewResults}
-                  className='w-full bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-blue-700 transition'
+                  className='w-full bg-gradient-to-r from-blue-600 to-cyan-600 text-white px-6 py-4 rounded-lg font-bold hover:shadow-lg transition transform hover:scale-105 active:scale-95 flex items-center justify-center gap-2'
                 >
+                  <svg className='w-5 h-5' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+                    <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2' />
+                  </svg>
                   View Detailed Results
                 </button>
               </div>
@@ -379,7 +424,7 @@ export default function DiseasePredictor() {
               <div className='h-80 flex items-center justify-center'>
                 <div className='text-center'>
                   <svg
-                    className='w-16 h-16 mx-auto text-gray-300 mb-2'
+                    className='w-24 h-24 mx-auto text-gray-200 mb-4'
                     fill='none'
                     stroke='currentColor'
                     viewBox='0 0 24 24'
@@ -387,90 +432,49 @@ export default function DiseasePredictor() {
                     <path
                       strokeLinecap='round'
                       strokeLinejoin='round'
-                      strokeWidth={2}
+                      strokeWidth={1.5}
                       d='M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z'
                     />
                   </svg>
-                  <p className='text-gray-500'>Upload and analyze an image to see results</p>
+                  <p className='text-gray-500 font-semibold'>Upload and analyze an image to see results</p>
+                  <p className='text-gray-400 text-sm mt-2'>Results will appear here</p>
                 </div>
               </div>
             )}
           </div>
         </div>
 
-        {/* Visualization Section */}
-        {result && result.visualizations && (
-          <div className='bg-white rounded-lg shadow-md p-6 mb-6'>
-            <h2 className='text-xl font-bold text-gray-800 mb-4'>Disease Visualization</h2>
-            <div className='grid md:grid-cols-3 gap-4'>
-              {/* Leaf Area */}
-              <div>
-                <p className='text-sm font-semibold text-gray-700 mb-2 text-center'>Leaf Area (Green)</p>
-                {result.visualizations.leafArea ? (
-                  <img
-                    src={result.visualizations.leafArea}
-                    alt='Leaf area'
-                    className='w-full h-64 object-cover rounded-lg border-2 border-green-200'
-                  />
-                ) : (
-                  <div className='w-full h-64 bg-gray-200 rounded-lg flex items-center justify-center'>
-                    <p className='text-gray-500'>No visualization</p>
-                  </div>
-                )}
-              </div>
 
-              {/* Disease Area */}
-              <div>
-                <p className='text-sm font-semibold text-gray-700 mb-2 text-center'>Disease Area (Red)</p>
-                {result.visualizations.diseaseArea ? (
-                  <img
-                    src={result.visualizations.diseaseArea}
-                    alt='Disease area'
-                    className='w-full h-64 object-cover rounded-lg border-2 border-red-200'
-                  />
-                ) : (
-                  <div className='w-full h-64 bg-gray-200 rounded-lg flex items-center justify-center'>
-                    <p className='text-gray-500'>No visualization</p>
-                  </div>
-                )}
-              </div>
-
-              {/* Combined */}
-              <div>
-                <p className='text-sm font-semibold text-gray-700 mb-2 text-center'>Combined Analysis</p>
-                {result.visualizations.combined ? (
-                  <img
-                    src={result.visualizations.combined}
-                    alt='Combined analysis'
-                    className='w-full h-64 object-cover rounded-lg border-2 border-blue-200'
-                  />
-                ) : (
-                  <div className='w-full h-64 bg-gray-200 rounded-lg flex items-center justify-center'>
-                    <p className='text-gray-500'>No visualization</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* Info Cards */}
         <div className='grid md:grid-cols-4 gap-4'>
-          <div className='bg-white rounded-lg shadow p-4 border-l-4 border-green-600'>
-            <h3 className='font-bold text-green-700 mb-2'>Very Early (0-10%)</h3>
-            <p className='text-sm text-gray-600'>Focus on strengthening immunity</p>
+          <div className='bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl shadow-lg p-6 border-l-4 border-green-600 hover:shadow-xl hover:scale-105 transition transform'>
+            <div className='flex items-center gap-2 mb-2'>
+              <span className='text-2xl'>✅</span>
+              <h3 className='font-bold text-green-700'>Very Early</h3>
+            </div>
+            <p className='text-sm text-gray-600'><span className='font-semibold'>0-10%</span> - Focus on strengthening immunity</p>
           </div>
-          <div className='bg-white rounded-lg shadow p-4 border-l-4 border-yellow-600'>
-            <h3 className='font-bold text-yellow-700 mb-2'>Early (11-30%)</h3>
-            <p className='text-sm text-gray-600'>Increase nutrient support</p>
+          <div className='bg-gradient-to-br from-yellow-50 to-amber-50 rounded-xl shadow-lg p-6 border-l-4 border-yellow-600 hover:shadow-xl hover:scale-105 transition transform'>
+            <div className='flex items-center gap-2 mb-2'>
+              <span className='text-2xl'>⚠️</span>
+              <h3 className='font-bold text-yellow-700'>Early</h3>
+            </div>
+            <p className='text-sm text-gray-600'><span className='font-semibold'>11-30%</span> - Increase nutrient support</p>
           </div>
-          <div className='bg-white rounded-lg shadow p-4 border-l-4 border-orange-600'>
-            <h3 className='font-bold text-orange-700 mb-2'>Progressive (31-60%)</h3>
-            <p className='text-sm text-gray-600'>Critical nutrient boost needed</p>
+          <div className='bg-gradient-to-br from-orange-50 to-red-50 rounded-xl shadow-lg p-6 border-l-4 border-orange-600 hover:shadow-xl hover:scale-105 transition transform'>
+            <div className='flex items-center gap-2 mb-2'>
+              <span className='text-2xl'>🔴</span>
+              <h3 className='font-bold text-orange-700'>Progressive</h3>
+            </div>
+            <p className='text-sm text-gray-600'><span className='font-semibold'>31-60%</span> - Critical nutrient boost needed</p>
           </div>
-          <div className='bg-white rounded-lg shadow p-4 border-l-4 border-red-600'>
-            <h3 className='font-bold text-red-700 mb-2'>Critical (61-100%)</h3>
-            <p className='text-sm text-gray-600'>Severe intervention required</p>
+          <div className='bg-gradient-to-br from-red-50 to-rose-50 rounded-xl shadow-lg p-6 border-l-4 border-red-600 hover:shadow-xl hover:scale-105 transition transform'>
+            <div className='flex items-center gap-2 mb-2'>
+              <span className='text-2xl'>🚨</span>
+              <h3 className='font-bold text-red-700'>Critical</h3>
+            </div>
+            <p className='text-sm text-gray-600'><span className='font-semibold'>61-100%</span> - Severe intervention required</p>
           </div>
         </div>
       </div>
