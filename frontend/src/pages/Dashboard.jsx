@@ -1,43 +1,43 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
+
 export default function Dashboard() {
-  const navigate = useNavigate();
+   const navigate = useNavigate();
   const [hoveredCard, setHoveredCard] = useState(null);
 
-
-const cards = [
-  {
-    title: "Start New Input",
-    desc: "Enter field details, costs and constraints to get predictions.",
-    to: "/app/cost/in",
-    cta: "Go to Input Page",
-    icon: "📝",
-    color: "from-green-500 to-emerald-600",
-    bgColor: "bg-green-50",
-    borderColor: "border-green-200",
-  },
-  {
-    title: "View Results",
-    desc: "Check predicted yield, revenue and key metrics.",
-    to: "/app/cost/results",
-    cta: "Open Results",
-    icon: "📊",
-    color: "from-blue-500 to-indigo-600",
-    bgColor: "bg-blue-50",
-    borderColor: "border-blue-200",
-  },
-  {
-    title: "Recommendations",
-    desc: "See actionable fertilizer, irrigation and variety tips.",
-    to: "/app/cost/recommendations",
-    cta: "See Recommendations",
-    icon: "💡",
-    color: "from-purple-500 to-pink-600",
-    bgColor: "bg-purple-50",
-    borderColor: "border-purple-200",
-  },
-];
+  const cards = [
+    {
+      title: "Start New Input",
+      desc: "Enter field details, costs and constraints to get predictions.",
+      to: "/app/cost/in",
+      cta: "Go to Input Page",
+      icon: "📝",
+      color: "from-green-500 to-emerald-600",
+      bgColor: "bg-green-50",
+      borderColor: "border-green-200",
+    },
+    {
+      title: "View Results",
+      desc: "Check predicted yield, revenue and key metrics.",
+      to: "/app/cost/results",
+      cta: "Open Results",
+      icon: "📊",
+      color: "from-blue-500 to-indigo-600",
+      bgColor: "bg-blue-50",
+      borderColor: "border-blue-200",
+    },
+    {
+      title: "Recommendations",
+      desc: "See actionable fertilizer, irrigation and variety tips.",
+      to: "/app/cost/recommendations",
+      cta: "See Recommendations",
+      icon: "💡",
+      color: "from-purple-500 to-pink-600",
+      bgColor: "bg-purple-50",
+      borderColor: "border-purple-200",
+    },
+  ];
 
   const quickStats = [
     {
@@ -88,8 +88,9 @@ const cards = [
   ];
 
   const handleNavigate = (path) => {
-  navigate(path);
-};
+    console.log("Navigate to:", path);
+     navigate(path);
+  };
 
   return (
     <div className='min-h-screen bg-gradient-to-br from-green-50 via-blue-50 to-purple-50'>
@@ -187,12 +188,10 @@ const cards = [
                 onMouseLeave={() => setHoveredCard(null)}
                 onClick={() => handleNavigate(card.to)}
               >
-                {/* Decorative gradient overlay */}
                 <div
                   className={`absolute inset-0 bg-gradient-to-br ${card.color} opacity-0 group-hover:opacity-5 transition-opacity duration-300`}
                 ></div>
 
-                {/* Card Header */}
                 <div className={`relative p-8 bg-gradient-to-br ${card.color}`}>
                   <div className='absolute top-4 right-4 opacity-20'>
                     <div className='text-7xl'>{card.icon}</div>
@@ -208,7 +207,6 @@ const cards = [
                   </div>
                 </div>
 
-                {/* Card Footer */}
                 <div className={`p-6 ${card.bgColor} relative z-10`}>
                   <button
                     className={`w-full py-4 px-6 rounded-xl font-semibold transition transform ${
@@ -238,7 +236,6 @@ const cards = [
                   </button>
                 </div>
 
-                {/* Badge */}
                 {i === 0 && (
                   <div className='absolute top-4 right-4 bg-yellow-400 text-yellow-900 text-xs font-bold px-3 py-1 rounded-full shadow-lg'>
                     Popular
@@ -331,63 +328,77 @@ const cards = [
             </div>
           </div>
 
-          {/* System Status - Takes 1 column */}
-          <div className='bg-gradient-to-br from-green-50 to-emerald-50 rounded-3xl shadow-xl p-8 border-2 border-green-200'>
+          {/* Performance Insights - Right Column */}
+          <div className='bg-gradient-to-br from-purple-600 to-indigo-700 rounded-3xl shadow-xl p-8 text-white border border-purple-500'>
             <div className='flex items-center mb-6'>
-              <span className='text-4xl mr-3'>⚙️</span>
-              <h3 className='text-2xl font-bold text-gray-800'>
-                System Status
-              </h3>
+              <span className='text-3xl mr-3'>📊</span>
+              <h3 className='text-2xl font-bold'>Performance Insights</h3>
             </div>
 
-            <div className='space-y-4'>
-              <div className='bg-white rounded-2xl p-4 shadow-sm hover:shadow-md transition'>
-                <div className='flex justify-between items-center mb-2'>
-                  <span className='text-sm text-gray-600 font-medium'>
-                    Model Version
+            <div className='space-y-6'>
+              <div className='bg-white/10 backdrop-blur-sm rounded-2xl p-5 border border-white/20'>
+                <div className='flex items-center justify-between mb-3'>
+                  <span className='text-purple-100 text-sm font-medium'>
+                    Success Rate
                   </span>
-                  <span className='text-lg font-bold text-gray-800'>
-                    v2.3.1
-                  </span>
+                  <span className='text-2xl font-bold'>94%</span>
                 </div>
-                <div className='h-2 bg-gray-200 rounded-full overflow-hidden'>
-                  <div className='h-full bg-gradient-to-r from-green-400 to-blue-500 w-full'></div>
-                </div>
-              </div>
-
-              <div className='bg-white rounded-2xl p-4 shadow-sm hover:shadow-md transition'>
-                <div className='flex justify-between items-center'>
-                  <span className='text-sm text-gray-600 font-medium'>
-                    Last Updated
-                  </span>
-                  <span className='text-sm font-semibold text-gray-800'>
-                    Nov 27, 2025
-                  </span>
+                <div className='w-full bg-white/20 rounded-full h-2.5'>
+                  <div
+                    className='bg-yellow-400 h-2.5 rounded-full'
+                    style={{ width: "94%" }}
+                  ></div>
                 </div>
               </div>
 
-              <div className='bg-white rounded-2xl p-4 shadow-sm hover:shadow-md transition'>
-                <div className='flex justify-between items-center'>
-                  <span className='text-sm text-gray-600 font-medium'>
-                    Status
+              <div className='bg-white/10 backdrop-blur-sm rounded-2xl p-5 border border-white/20'>
+                <div className='flex items-center justify-between mb-3'>
+                  <span className='text-purple-100 text-sm font-medium'>
+                    Avg. Profit Margin
                   </span>
-                  <span className='flex items-center text-sm font-bold text-green-600'>
-                    <span className='relative flex h-3 w-3 mr-2'>
-                      <span className='animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75'></span>
-                      <span className='relative inline-flex rounded-full h-3 w-3 bg-green-500'></span>
-                    </span>
-                    Active
-                  </span>
+                  <span className='text-2xl font-bold'>32%</span>
+                </div>
+                <div className='w-full bg-white/20 rounded-full h-2.5'>
+                  <div
+                    className='bg-green-400 h-2.5 rounded-full'
+                    style={{ width: "32%" }}
+                  ></div>
                 </div>
               </div>
 
-              <div className='bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl p-4 text-white mt-6'>
-                <p className='text-sm font-medium mb-2'>💡 Quick Tip</p>
-                <p className='text-xs leading-relaxed opacity-90'>
-                  Update soil test results every season for more accurate
-                  predictions.
-                </p>
+              <div className='bg-white/10 backdrop-blur-sm rounded-2xl p-5 border border-white/20'>
+                <div className='flex items-center justify-between mb-3'>
+                  <span className='text-purple-100 text-sm font-medium'>
+                    Cost Efficiency
+                  </span>
+                  <span className='text-2xl font-bold'>87%</span>
+                </div>
+                <div className='w-full bg-white/20 rounded-full h-2.5'>
+                  <div
+                    className='bg-blue-400 h-2.5 rounded-full'
+                    style={{ width: "87%" }}
+                  ></div>
+                </div>
               </div>
+            </div>
+
+            <div className='mt-8 pt-6 border-t border-white/20'>
+              <button className='w-full bg-white/20 hover:bg-white/30 backdrop-blur-sm border border-white/30 text-white font-semibold py-3 px-6 rounded-xl transition-all flex items-center justify-center group'>
+                <span>View Detailed Analytics</span>
+                <svg
+                  className='w-5 h-5 ml-2 transform group-hover:translate-x-1 transition-transform'
+                  fill='none'
+                  stroke='currentColor'
+                  viewBox='0 0 24 24'
+                >
+                  <path
+                    strokeLinecap='round'
+                    strokeLinejoin='round'
+                    strokeWidth={2}
+                    d='M13 7l5 5m0 0l-5 5m5-5H6'
+                  />
+                </svg>
+              </button>
             </div>
           </div>
         </div>
@@ -442,7 +453,6 @@ const cards = [
           </div>
         </div>
       </div>
-
     </div>
   );
 }

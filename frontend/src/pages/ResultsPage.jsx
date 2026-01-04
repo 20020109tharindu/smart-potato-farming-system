@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
+import LanguageSwitcher from "../components/LanguageSwitcher.jsx";
 
 // Helper function for currency formatting (LKR)
 const formatLKR = (amount) => {
@@ -11,68 +13,27 @@ export default function ResultsPage() {
   const navigate = useNavigate();
   const { t } = useTranslation();
 
-  const [data, setData] = useState(null);
-  const [result, setResult] = useState(null);
+  const [analysis, setAnalysis] = useState(null); // backend response
+  const [lastForm, setLastForm] = useState(null); // form the user submitted
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Load from session or mock
-    const stored = sessionStorage.getItem("lastForm");
-    const fromStorage = stored ? JSON.parse(stored) : null;
-
-    const mockForm = {
-      season_type: "0",
-      district: "Nuwara Eliya",
-      field_size_acres: "3",
-      potato_variety: "0",
-      soil_type: "2",
-      planned_fertilizer_kg_per_acre: "150",
-      seed_cost_lkr: "45000",
-      fertilizer_cost_lkr: "30000",
-      labor_cost_lkr: "75000",
-      hands_on_money_lkr: "200000",
-    };
-
-    const formToUse = fromStorage || mockForm;
-    setData(formToUse);
-
-    if (!formToUse) {
-      setResult(null);
+    // read backend response saved by InputPage
+    const raw = sessionStorage.getItem("analysisResult");
+    const lf = sessionStorage.getItem("lastForm");
+    try {
+      const parsed = raw ? JSON.parse(raw) : null;
+      const parsedForm = lf ? JSON.parse(lf) : null;
+      setAnalysis(parsed);
+      setLastForm(parsedForm);
+    } catch (err) {
+      console.error("Parsing session storage:", err);
+      setAnalysis(null);
+      setLastForm(null);
+    } finally {
       setLoading(false);
-      return;
     }
-
-    // --- Calculation Logic (mock) ---
-    const fieldSize = Number(formToUse.field_size_acres || 0);
-    const fertilizer = Number(formToUse.planned_fertilizer_kg_per_acre || 0);
-    const seedCost = Number(formToUse.seed_cost_lkr || 0);
-    const fertCost = Number(formToUse.fertilizer_cost_lkr || 0);
-    const laborCost = Number(formToUse.labor_cost_lkr || 0);
-    const moneyAtHand = Number(formToUse.hands_on_money_lkr || 0);
-
-    const basePrice = 200;
-    const priceModifier = fieldSize * 2;
-    const predictedPrice = Math.max(160, basePrice - priceModifier);
-
-    const yieldKg = fieldSize * (1800 + (fertilizer - 50) * 10);
-    const revenue = yieldKg * predictedPrice;
-    const cost = seedCost + fertCost + laborCost;
-    const profit = revenue - cost;
-    const feasible = cost <= moneyAtHand;
-
-    setResult({ yieldKg, revenue, cost, profit, feasible, predictedPrice });
-    setLoading(false);
   }, []);
-
-  const handleNewPrediction = () => {
-    // In actual app: nav("/")
-    window.location.reload();
-  };
-
-  const handleViewRecommendations = () => {
-      // In actual app: nav("/app/recommendations")
-    alert("Navigate to recommendations page");
-  };
 
   if (loading) {
     return (
@@ -89,7 +50,7 @@ export default function ResultsPage() {
     );
   }
 
-  if (result === null) {
+  if (!analysis || analysis.status !== "ok") {
     return (
       <div className='min-h-screen bg-gradient-to-br from-green-50 to-blue-50 flex items-center justify-center px-4'>
         <div className='bg-white rounded-2xl shadow-xl p-8 max-w-md text-center'>
@@ -104,7 +65,7 @@ export default function ResultsPage() {
             })}
           </p>
           <button
-            onClick={handleNewPrediction}
+            onClick={() => navigate("/")}
             className='bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 text-white font-semibold py-3 px-6 rounded-xl shadow-lg transform transition hover:scale-105'
           >
             {t("results.gotoInput", { defaultValue: "Go to Input Form" })}
@@ -114,11 +75,21 @@ export default function ResultsPage() {
     );
   }
 
-  const profitPercentage =
-    result.cost > 0 ? (result.profit / result.cost) * 100 : 0;
-  const yieldPerAcre = data
-    ? result.yieldKg / Number(data.field_size_acres)
-    : 0;
+  const { baseline, strategies } = analysis;
+  const bestStrategy =
+    strategies && strategies.length > 0
+      ? strategies.reduce((a, b) =>
+          b.net_profit_lkr > a.net_profit_lkr ? b : a
+        )
+      : null;
+
+  // compute cost & feasibility from lastForm (if available)
+  const seedCost = lastForm ? Number(lastForm.seed_cost_lkr || 0) : 0;
+  const fertCost = lastForm ? Number(lastForm.fertilizer_cost_lkr || 0) : 0;
+  const laborCost = lastForm ? Number(lastForm.labor_cost_lkr || 0) : 0;
+  const totalCost = seedCost + fertCost + laborCost;
+  const capital = lastForm ? Number(lastForm.hands_on_money_lkr || 0) : 0;
+  const feasible = totalCost <= capital;
 
   return (
     <div className='min-h-screen bg-gradient-to-br from-green-50 to-blue-50 py-8 px-4'>
@@ -156,7 +127,7 @@ export default function ResultsPage() {
         </div>
 
         {/* Feasibility Alert */}
-        {result.feasible ? (
+        {feasible ? (
           <div className='bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-6 rounded-lg shadow-md'>
             <div className='flex items-center'>
               <svg
@@ -229,13 +200,13 @@ export default function ResultsPage() {
               </span>
             </div>
             <p className='text-3xl font-bold text-gray-800'>
-              {result.yieldKg.toLocaleString()}
+              {Math.round(baseline.yield_total).toLocaleString()}
             </p>
             <p className='text-sm text-gray-600'>
               {t("results.cards.kgTotal", { defaultValue: "kg total" })}
             </p>
             <p className='text-xs text-gray-500 mt-1'>
-              {yieldPerAcre.toFixed(0)}{" "}
+              {Math.round(baseline.yield_per_acre)}{" "}
               {t("results.cards.kgAcre", { defaultValue: "kg/acre" })}
             </p>
           </div>
@@ -251,7 +222,7 @@ export default function ResultsPage() {
               </span>
             </div>
             <p className='text-3xl font-bold text-yellow-600'>
-              {formatLKR(result.predictedPrice)}
+              {formatLKR(baseline.price_lkr_per_kg)}
             </p>
             <p className='text-sm text-gray-600'>
               {t("results.cards.perKg", { defaultValue: "Per kg (Estimated)" })}
@@ -263,7 +234,7 @@ export default function ResultsPage() {
             </p>
           </div>
 
-          {/* Revenue */}
+          {/* Revenue (best strategy) */}
           <div className='bg-white rounded-xl shadow-lg p-6 border-t-4 border-green-500 transform transition hover:scale-105'>
             <div className='flex items-center justify-between mb-2'>
               <span className='text-3xl'>💵</span>
@@ -272,7 +243,7 @@ export default function ResultsPage() {
               </span>
             </div>
             <p className='text-3xl font-bold text-green-600'>
-              {formatLKR(result.revenue)}
+              {bestStrategy ? formatLKR(bestStrategy.revenue_lkr) : "N/A"}
             </p>
             <p className='text-sm text-gray-600'>
               {t("results.cards.expectedIncome", {
@@ -280,11 +251,11 @@ export default function ResultsPage() {
               })}
             </p>
             <p className='text-xs text-gray-500 mt-1'>
-              @ {formatLKR(result.predictedPrice)}/kg
+              @ {formatLKR(baseline.price_lkr_per_kg)}/kg
             </p>
           </div>
 
-          {/* Total Cost */}
+          {/* Total Cost (from submitted form) */}
           <div className='bg-white rounded-xl shadow-lg p-6 border-t-4 border-orange-500 transform transition hover:scale-105'>
             <div className='flex items-center justify-between mb-2'>
               <span className='text-3xl'>💰</span>
@@ -293,7 +264,7 @@ export default function ResultsPage() {
               </span>
             </div>
             <p className='text-3xl font-bold text-orange-600'>
-              {formatLKR(result.cost)}
+              {formatLKR(totalCost)}
             </p>
             <p className='text-sm text-gray-600'>
               {t("results.cards.investmentNeeded", {
@@ -302,19 +273,21 @@ export default function ResultsPage() {
             </p>
             <p className='text-xs text-gray-500 mt-1'>
               {t("results.cards.capital", { defaultValue: "Capital" })}:{" "}
-              {formatLKR(Number(data.hands_on_money_lkr))}
+              {formatLKR(capital)}
             </p>
           </div>
 
-          {/* Net Profit */}
+          {/* Net Profit (best strategy) */}
           <div
             className={`bg-white rounded-xl shadow-lg p-6 border-t-4 ${
-              result.profit >= 0 ? "border-purple-500" : "border-red-500"
+              bestStrategy && bestStrategy.net_profit_lkr >= 0
+                ? "border-purple-500"
+                : "border-red-500"
             } transform transition hover:scale-105`}
           >
             <div className='flex items-center justify-between mb-2'>
               <span className='text-3xl'>
-                {result.profit >= 0 ? "📈" : "📉"}
+                {bestStrategy && bestStrategy.net_profit_lkr >= 0 ? "📈" : "📉"}
               </span>
               <span className='text-xs font-semibold text-gray-500 uppercase'>
                 {t("results.cards.netProfit", { defaultValue: "Net Profit" })}
@@ -322,30 +295,37 @@ export default function ResultsPage() {
             </div>
             <p
               className={`text-3xl font-bold ${
-                result.profit >= 0 ? "text-purple-600" : "text-red-600"
+                bestStrategy && bestStrategy.net_profit_lkr >= 0
+                  ? "text-purple-600"
+                  : "text-red-600"
               }`}
             >
-              {formatLKR(result.profit)}
+              {bestStrategy ? formatLKR(bestStrategy.net_profit_lkr) : "N/A"}
             </p>
             <p className='text-sm text-gray-600'>
-              {result.profit >= 0
-                ? t("results.cards.expectedProfit", {
-                    defaultValue: "Expected profit",
-                  })
-                : t("results.cards.expectedLoss", {
-                    defaultValue: "Expected loss",
-                  })}
+              {/* {bestStrategy ? bestStrategy.farmer_explanation : ""} */}
             </p>
-            <p
-              className={`text-xs mt-1 font-semibold ${
-                profitPercentage >= 0 ? "text-purple-600" : "text-red-600"
-              }`}
-            >
-              {profitPercentage >= 0 ? "+" : ""}
-              {profitPercentage.toFixed(1)}%{" "}
-              {t("results.cards.roi", { defaultValue: "ROI" })}
+            <p className='text-xs mt-1 font-semibold text-purple-600'>
+              {bestStrategy
+                ? `${bestStrategy.roi_percent.toFixed(1)}% ROI`
+                : ""}
             </p>
           </div>
+        </div>
+        <div>
+          <div className='bg-white rounded-2xl shadow-xl p-8 mb-6 border-l-4 border-blue-500'>
+            <h2 className='text-2xl font-bold text-gray-800 mb-4 flex items-center'>
+              <span className='text-3xl mr-3'>💡</span>
+              {t("results.explanation.title", {
+                defaultValue: "Farmer's Insight",
+              })}
+            </h2>
+
+            <p className='text-gray-700 leading-relaxed text-lg'>
+              {bestStrategy ? bestStrategy.farmer_explanation : ""}
+            </p>
+          </div>
+          {bestStrategy ? bestStrategy.farmer_explanation : ""}
         </div>
 
         {/* Cost Breakdown */}
@@ -364,7 +344,7 @@ export default function ResultsPage() {
                 </span>
               </div>
               <span className='text-lg font-semibold text-gray-800'>
-                {formatLKR(Number(data.seed_cost_lkr))}
+                {formatLKR(seedCost)}
               </span>
             </div>
 
@@ -378,7 +358,7 @@ export default function ResultsPage() {
                 </span>
               </div>
               <span className='text-lg font-semibold text-gray-800'>
-                {formatLKR(Number(data.fertilizer_cost_lkr))}
+                {formatLKR(fertCost)}
               </span>
             </div>
 
@@ -390,7 +370,7 @@ export default function ResultsPage() {
                 </span>
               </div>
               <span className='text-lg font-semibold text-gray-800'>
-                {formatLKR(Number(data.labor_cost_lkr))}
+                {formatLKR(laborCost)}
               </span>
             </div>
 
@@ -402,7 +382,7 @@ export default function ResultsPage() {
                   })}
                 </span>
                 <span className='text-2xl font-bold text-gray-800'>
-                  {formatLKR(result.cost)}
+                  {formatLKR(totalCost)}
                 </span>
               </div>
             </div>
@@ -414,17 +394,17 @@ export default function ResultsPage() {
                 })}
               </span>
               <span className='text-2xl font-bold text-purple-600'>
-                {formatLKR(Number(data.hands_on_money_lkr))}
+                {formatLKR(capital)}
               </span>
             </div>
 
-            {!result.feasible && (
+            {!feasible && (
               <div className='p-4 bg-red-50 rounded-lg border border-red-200'>
                 <p className='text-red-700 font-medium'>
                   {t("results.breakdown.needMore", {
                     defaultValue: "⚠️ Additional funding needed:",
                   })}{" "}
-                  {formatLKR(result.cost - Number(data.hands_on_money_lkr))}
+                  {formatLKR(totalCost - capital)}
                 </p>
               </div>
             )}
@@ -444,7 +424,7 @@ export default function ResultsPage() {
                 {t("results.farm.district", { defaultValue: "District" })}
               </p>
               <p className='text-lg font-semibold text-gray-800'>
-                {data.district}
+                {lastForm ? lastForm.district : "N/A"}
               </p>
             </div>
 
@@ -453,8 +433,11 @@ export default function ResultsPage() {
                 {t("results.farm.fieldSize", { defaultValue: "Field Size" })}
               </p>
               <p className='text-lg font-semibold text-gray-800'>
-                {data.field_size_acres}{" "}
-                {t("results.farm.acres", { defaultValue: "acres" })}
+                {lastForm
+                  ? `${lastForm.field_size_acres} ${t("results.farm.acres", {
+                      defaultValue: "acres",
+                    })}`
+                  : "N/A"}
               </p>
             </div>
 
@@ -463,9 +446,7 @@ export default function ResultsPage() {
                 {t("results.farm.season", { defaultValue: "Season" })}
               </p>
               <p className='text-lg font-semibold text-gray-800'>
-                {data.season_type === "0"
-                  ? t("season.maha", { defaultValue: "Maha" })
-                  : t("season.yala", { defaultValue: "Yala" })}
+                {lastForm ? lastForm.season_type : "N/A"}
               </p>
             </div>
 
@@ -476,7 +457,9 @@ export default function ResultsPage() {
                 })}
               </p>
               <p className='text-lg font-semibold text-gray-800'>
-                {data.planned_fertilizer_kg_per_acre} kg/acre
+                {lastForm
+                  ? `${lastForm.planned_fertilizer_kg_per_acre} kg/acre`
+                  : "N/A"}
               </p>
             </div>
           </div>
@@ -485,7 +468,7 @@ export default function ResultsPage() {
         {/* Actions */}
         <div className='flex flex-col sm:flex-row gap-4'>
           <button
-            onClick={handleViewRecommendations}
+            onClick={() => navigate("/app/cost/recommendations")}
             className='flex-1 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-4 px-6 rounded-xl shadow-lg transform transition hover:scale-105 focus:outline-none focus:ring-4 focus:ring-blue-300'
           >
             📋{" "}
@@ -495,7 +478,7 @@ export default function ResultsPage() {
           </button>
 
           <button
-            onClick={handleNewPrediction}
+            onClick={() => navigate("/")}
             className='flex-1 bg-white hover:bg-gray-50 text-gray-800 font-semibold py-4 px-6 rounded-xl shadow-lg border-2 border-gray-300 transform transition hover:scale-105 focus:outline-none focus:ring-4 focus:ring-gray-300'
           >
             🔄 {t("results.newPrediction", { defaultValue: "New Prediction" })}
