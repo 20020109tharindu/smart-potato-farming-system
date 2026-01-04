@@ -7,7 +7,7 @@ Overview
 
 ### Architecture
 
-![alt text](<Potato Analysis API Pipeline-2026-01-04-092910 (1).png>)
+ See architect.png
 
 Quickstart (Windows)
 
