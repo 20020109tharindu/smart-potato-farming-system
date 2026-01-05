@@ -31,11 +31,35 @@ def predict_soil_suitability(data):
         if mdl is None:
             return {"error": "Model not loaded"}
         
-        # Expected features (excluding OM and Altitude)
-        features = ['pH', 'EC', 'P', 'K', 'Temperature', 'Humidity', 'Moisture', 'N']
+        # Check if model is a dictionary (pipeline)
+        if isinstance(mdl, dict):
+            # If model is a dict, try to get the actual model
+            if 'model' in mdl:
+                mdl = mdl['model']
+            elif 'classifier' in mdl:
+                mdl = mdl['classifier']
+            else:
+                # Use the first value if structure is unknown
+                mdl = list(mdl.values())[0]
         
-        # Create DataFrame with input data
-        input_df = pd.DataFrame([data], columns=features)
+        # Try to get feature names from the model
+        if hasattr(mdl, 'feature_names_in_'):
+            # Use the exact feature order the model was trained with
+            features = mdl.feature_names_in_.tolist()
+        else:
+            # Default feature order (excluding OM and Altitude)
+            features = ['pH', 'EC', 'P', 'K', 'Temperature', 'Humidity', 'Moisture', 'N']
+        
+        # Ensure we have all required features in the input data
+        input_values = []
+        for feature in features:
+            if feature in data:
+                input_values.append(float(data[feature]))
+            else:
+                raise ValueError(f"Missing required feature: {feature}")
+        
+        # Create DataFrame with input data in correct order
+        input_df = pd.DataFrame([input_values], columns=features)
         
         # Make prediction
         prediction = mdl.predict(input_df)[0]

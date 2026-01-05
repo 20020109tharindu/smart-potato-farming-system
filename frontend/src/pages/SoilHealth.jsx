@@ -16,7 +16,8 @@ export default function SoilHealth() {
     Temperature: '',
     Humidity: '',
     Moisture: '',
-    N: ''
+    N: '',
+    Growth_Stage: 'Germination'
   });
 
   // Fetch statistics on mount
@@ -94,7 +95,8 @@ export default function SoilHealth() {
       Temperature: '',
       Humidity: '',
       Moisture: '',
-      N: ''
+      N: '',
+      Growth_Stage: 'Germination'
     });
     setPrediction(null);
     setActiveTab('predict');
@@ -282,10 +284,38 @@ export default function SoilHealth() {
                   </div>
                 </div>
 
+                {/* Growth Stage */}
+                <div>
+                  <h3 className="text-lg font-medium text-gray-700 mb-3 flex items-center">
+                    <span className="bg-purple-100 text-purple-700 rounded-full w-8 h-8 flex items-center justify-center mr-2 text-sm">2</span>
+                    Growth Stage
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Current Growth Stage
+                      </label>
+                      <select
+                        name="Growth_Stage"
+                        value={formData.Growth_Stage}
+                        onChange={handleInputChange}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                        required
+                      >
+                        <option value="Germination">Germination (0-3 weeks)</option>
+                        <option value="Vegetative">Vegetative (3-6 weeks)</option>
+                        <option value="Tuber_Initiation">Tuber Initiation (6-10 weeks)</option>
+                        <option value="Maturation">Maturation (10-16 weeks)</option>
+                      </select>
+                      <p className="text-xs text-gray-500 mt-1">Select the current growth stage of your potato crop</p>
+                    </div>
+                  </div>
+                </div>
+
                 {/* Environmental Conditions */}
                 <div>
                   <h3 className="text-lg font-medium text-gray-700 mb-3 flex items-center">
-                    <span className="bg-blue-100 text-blue-700 rounded-full w-8 h-8 flex items-center justify-center mr-2 text-sm">2</span>
+                    <span className="bg-blue-100 text-blue-700 rounded-full w-8 h-8 flex items-center justify-center mr-2 text-sm">3</span>
                     Environmental Conditions
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
