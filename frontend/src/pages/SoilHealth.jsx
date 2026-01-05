@@ -196,15 +196,13 @@ export default function SoilHealth() {
                         pH Level
                       </label>
                       <input
-                        type="number"
+                        type="text"
+                        inputMode="decimal"
                         name="pH"
-                        step="0.01"
-                        min="4"
-                        max="8"
                         value={formData.pH}
                         onChange={handleInputChange}
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                        placeholder="5.5 - 6.5"
+                        placeholder="e.g., 6.49"
                         required
                       />
                       <p className="text-xs text-gray-500 mt-1">Optimal: 5.5-6.5</p>
@@ -215,14 +213,13 @@ export default function SoilHealth() {
                         EC (Electrical Conductivity)
                       </label>
                       <input
-                        type="number"
+                        type="text"
+                        inputMode="decimal"
                         name="EC"
-                        step="0.001"
-                        min="0"
                         value={formData.EC}
                         onChange={handleInputChange}
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                        placeholder="0.05 - 0.25"
+                        placeholder="e.g., 0.042"
                         required
                       />
                       <p className="text-xs text-gray-500 mt-1">dS/m</p>
@@ -233,14 +230,13 @@ export default function SoilHealth() {
                         Nitrogen (N)
                       </label>
                       <input
-                        type="number"
+                        type="text"
+                        inputMode="decimal"
                         name="N"
-                        step="0.1"
-                        min="0"
                         value={formData.N}
                         onChange={handleInputChange}
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                        placeholder="20 - 70"
+                        placeholder="e.g., 40.2"
                         required
                       />
                       <p className="text-xs text-gray-500 mt-1">ppm</p>
@@ -251,14 +247,13 @@ export default function SoilHealth() {
                         Phosphorus (P)
                       </label>
                       <input
-                        type="number"
+                        type="text"
+                        inputMode="decimal"
                         name="P"
-                        step="0.1"
-                        min="0"
                         value={formData.P}
                         onChange={handleInputChange}
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                        placeholder="20 - 160"
+                        placeholder="e.g., 43.4"
                         required
                       />
                       <p className="text-xs text-gray-500 mt-1">ppm</p>
@@ -269,14 +264,13 @@ export default function SoilHealth() {
                         Potassium (K)
                       </label>
                       <input
-                        type="number"
+                        type="text"
+                        inputMode="decimal"
                         name="K"
-                        step="0.1"
-                        min="0"
                         value={formData.K}
                         onChange={handleInputChange}
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                        placeholder="100 - 400"
+                        placeholder="e.g., 250.4"
                         required
                       />
                       <p className="text-xs text-gray-500 mt-1">ppm</p>
@@ -324,14 +318,13 @@ export default function SoilHealth() {
                         Temperature (°C)
                       </label>
                       <input
-                        type="number"
+                        type="text"
+                        inputMode="decimal"
                         name="Temperature"
-                        step="0.1"
-                        min="0"
                         value={formData.Temperature}
                         onChange={handleInputChange}
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        placeholder="15 - 25"
+                        placeholder="e.g., 23.4"
                         required
                       />
                       <p className="text-xs text-gray-500 mt-1">Optimal: 15-25°C</p>
@@ -342,15 +335,13 @@ export default function SoilHealth() {
                         Humidity (%)
                       </label>
                       <input
-                        type="number"
+                        type="text"
+                        inputMode="decimal"
                         name="Humidity"
-                        step="0.1"
-                        min="0"
-                        max="100"
                         value={formData.Humidity}
                         onChange={handleInputChange}
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        placeholder="60 - 90"
+                        placeholder="e.g., 76.5"
                         required
                       />
                       <p className="text-xs text-gray-500 mt-1">%</p>
@@ -361,15 +352,13 @@ export default function SoilHealth() {
                         Soil Moisture (%)
                       </label>
                       <input
-                        type="number"
+                        type="text"
+                        inputMode="decimal"
                         name="Moisture"
-                        step="0.1"
-                        min="0"
-                        max="100"
                         value={formData.Moisture}
                         onChange={handleInputChange}
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        placeholder="40 - 75"
+                        placeholder="e.g., 61.4"
                         required
                       />
                       <p className="text-xs text-gray-500 mt-1">Optimal: 40-75%</p>
@@ -440,22 +429,31 @@ export default function SoilHealth() {
                       Recommended Fertilizers
                     </h3>
                     <div className="space-y-3">
-                      <div className="flex justify-between items-center p-3 bg-green-50 rounded-md">
-                        <span className="font-medium text-gray-700">Urea</span>
-                        <span className="text-lg font-bold text-green-700">
-                          {prediction.recommendations.urea} kg/acre
+                      <div className="flex justify-between items-center p-4 bg-green-50 rounded-lg border border-green-200">
+                        <div>
+                          <span className="font-semibold text-gray-800 block">Urea (Nitrogen Fertilizer)</span>
+                          <span className="text-xs text-gray-600">Apply to boost nitrogen levels</span>
+                        </div>
+                        <span className="text-2xl font-bold text-green-700">
+                          {prediction.recommendations.urea} <span className="text-sm font-normal">kg/acre</span>
                         </span>
                       </div>
-                      <div className="flex justify-between items-center p-3 bg-blue-50 rounded-md">
-                        <span className="font-medium text-gray-700">TSP (Triple Super Phosphate)</span>
-                        <span className="text-lg font-bold text-blue-700">
-                          {prediction.recommendations.tsp} kg/acre
+                      <div className="flex justify-between items-center p-4 bg-blue-50 rounded-lg border border-blue-200">
+                        <div>
+                          <span className="font-semibold text-gray-800 block">TSP (Triple Super Phosphate)</span>
+                          <span className="text-xs text-gray-600">Phosphorus supplement</span>
+                        </div>
+                        <span className="text-2xl font-bold text-blue-700">
+                          {prediction.recommendations.tsp} <span className="text-sm font-normal">kg/acre</span>
                         </span>
                       </div>
-                      <div className="flex justify-between items-center p-3 bg-purple-50 rounded-md">
-                        <span className="font-medium text-gray-700">MOP (Muriate of Potash)</span>
-                        <span className="text-lg font-bold text-purple-700">
-                          {prediction.recommendations.mop} kg/acre
+                      <div className="flex justify-between items-center p-4 bg-purple-50 rounded-lg border border-purple-200">
+                        <div>
+                          <span className="font-semibold text-gray-800 block">MOP (Muriate of Potash)</span>
+                          <span className="text-xs text-gray-600">Potassium fertilizer</span>
+                        </div>
+                        <span className="text-2xl font-bold text-purple-700">
+                          {prediction.recommendations.mop} <span className="text-sm font-normal">kg/acre</span>
                         </span>
                       </div>
                     </div>
@@ -465,13 +463,13 @@ export default function SoilHealth() {
                   <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-md">
                     <h3 className="text-lg font-semibold mb-4 text-gray-800 flex items-center">
                       <span className="mr-2">📋</span>
-                      Recommended Actions
+                      Recommended Actions & Guidelines
                     </h3>
-                    <ul className="space-y-2">
+                    <ul className="space-y-3">
                       {prediction.recommendations.actions.map((action, index) => (
-                        <li key={index} className="flex items-start gap-2 text-gray-700">
-                          <span className="text-green-500 mt-1">•</span>
-                          <span>{action}</span>
+                        <li key={index} className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg border-l-4 border-green-500">
+                          <span className="text-green-600 text-xl font-bold">{index + 1}.</span>
+                          <span className="text-gray-800 leading-relaxed">{action}</span>
                         </li>
                       ))}
                     </ul>
