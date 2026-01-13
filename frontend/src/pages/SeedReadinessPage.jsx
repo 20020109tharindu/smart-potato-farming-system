@@ -1,11 +1,14 @@
 import { useState, useRef } from "react";
+import ImageUpload from "../components/ImageUpload";
 
 export default function SeedReadinessPage() {
   const fileInputRef = useRef(null);
+  const resultRef = useRef(null);
   const [seedImage, setSeedImage] = useState(null);
   const [seedImagePreview, setSeedImagePreview] = useState(null);
   const [analyzing, setAnalyzing] = useState(false);
   const [result, setResult] = useState(null);
+  const [rawOutput, setRawOutput] = useState(null);
 
   // Handle image selection from camera or gallery
   const handleImageSelect = (e) => {
@@ -89,13 +92,72 @@ export default function SeedReadinessPage() {
     // setAnalyzing(false);
   };
 
+  // Map backend model outputs to page result shape
+  const handlePrediction = (data) => {
+    if (!data) {
+      setResult(null);
+      setRawOutput(null);
+      return;
+    }
+    // If data contains model keys, map to the UI's expected shape
+    if (data.seed_readiness || data.sprout_length) {
+      // keep raw model outputs so we can show exact labels + confidences
+      setRawOutput(data);
+      const seed = data.seed_readiness || { label: "unknown", confidence: 0 };
+      const sprout = data.sprout_length || { label: "unknown", confidence: 0 };
+      const shrivel = data.shrivel_level || { label: "unknown", confidence: 0 };
+      const damage = data.damage_level || { label: "unknown", confidence: 0 };
+
+      const fmt = (lbl) => String(lbl || "unknown").replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+      const seedLabel = fmt(seed.label);
+      const sproutLabel = fmt(sprout.label);
+      const shrivelLabel = fmt(shrivel.label);
+      const damageLabel = fmt(damage.label);
+      const confidencePct = Math.round((seed.confidence || 0) * 100);
+
+      const recommendations = [];
+      if ((seed.label || "").toLowerCase().includes("ready")) {
+        recommendations.push("Seeds look ready for planting — consider planting within 1–2 weeks.");
+      } else {
+        recommendations.push("Seeds may not be ready — consider waiting or checking moisture and maturity.");
+      }
+      recommendations.push(`Sprout length: ${sproutLabel}`);
+      recommendations.push(`Damage level: ${damageLabel}`);
+      if ((shrivel.label || "").toLowerCase().includes("high") || (shrivel.label || "").toLowerCase().includes("severe")) {
+        recommendations.push("High shriveling detected — sort out badly shriveled seeds before planting.");
+      }
+
+      const mapped = {
+        readiness: seedLabel,
+        confidence: confidencePct,
+        recommendations,
+        quality: {
+          size: sproutLabel,
+          color: damageLabel,
+          texture: shrivelLabel,
+        },
+      };
+
+      setResult(mapped);
+      // smooth-scroll to results for better UX
+      setTimeout(() => {
+        if (resultRef.current) resultRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 150);
+      return;
+    }
+
+    // Otherwise, assume data already matches shape
+    setResult(data);
+    setRawOutput(null);
+  };
+
   return (
-    <div className='min-h-screen bg-gradient-to-br from-purple-50 to-pink-50 py-8 px-4'>
+    <div className='min-h-screen bg-gradient-to-br from-green-50 to-amber-50 py-8 px-4'>
       <div className='max-w-4xl mx-auto'>
         <div className='bg-white rounded-2xl shadow-xl p-8'>
           {/* Header */}
           <div className='text-center mb-8'>
-            <h1 className='text-4xl font-bold text-purple-800 mb-2'>
+            <h1 className='text-4xl font-bold text-emerald-800 mb-2'>
               🌾 Seed Readiness Predictor
             </h1>
             <p className='text-gray-600'>
@@ -103,91 +165,43 @@ export default function SeedReadinessPage() {
             </p>
           </div>
 
-          {/* Upload Section */}
-          <div className='bg-purple-50 p-6 rounded-xl mb-6'>
-            <h2 className='text-xl font-semibold text-purple-800 mb-4'>
+          {/* Upload Section - uses centralized ImageUpload component */}
+          <div className='bg-emerald-50 p-6 rounded-xl mb-6'>
+            <h2 className='text-xl font-semibold text-emerald-800 mb-4'>
               📸 Upload Seed Photo
             </h2>
-
-            {/* Hidden file input */}
-            <input
-              ref={fileInputRef}
-              type='file'
-              accept='image/*'
-              onChange={handleImageSelect}
-              className='hidden'
-            />
-
-            {/* Upload Buttons */}
-            <div className='flex gap-3 mb-4'>
-              <button
-                type='button'
-                onClick={handleCameraCapture}
-                className='flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg shadow-md transform transition hover:scale-105 focus:outline-none focus:ring-4 focus:ring-blue-300 flex items-center justify-center gap-2'
-              >
-                📷 Take Photo
-              </button>
-              <button
-                type='button'
-                onClick={handleGalleryUpload}
-                className='flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-4 rounded-lg shadow-md transform transition hover:scale-105 focus:outline-none focus:ring-4 focus:ring-indigo-300 flex items-center justify-center gap-2'
-              >
-                🖼️ Upload Image
-              </button>
-            </div>
-
-            {/* Image Preview */}
-            {seedImagePreview ? (
-              <div className='relative'>
-                <div className='bg-white rounded-lg border-2 border-purple-300 p-4'>
-                  <img
-                    src={seedImagePreview}
-                    alt='Seed preview'
-                    className='w-full h-96 object-cover rounded-lg'
-                  />
-                  <div className='mt-4 bg-purple-100 p-3 rounded-lg'>
-                    <p className='text-sm text-purple-700 font-medium'>
-                      📄 File: {seedImage?.name}
-                    </p>
-                    <p className='text-xs text-purple-600'>
-                      Size: {((seedImage?.size || 0) / 1024).toFixed(2)} KB
-                    </p>
-                  </div>
-                </div>
-                <div className='mt-3 flex gap-2'>
-                  <button
-                    type='button'
-                    onClick={analyzeSeed}
-                    disabled={analyzing}
-                    className='flex-1 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold py-3 px-6 rounded-lg shadow-lg transform transition hover:scale-105 focus:outline-none focus:ring-4 focus:ring-purple-300 disabled:opacity-50 disabled:cursor-not-allowed'
-                  >
-                    {analyzing ? "🔍 Analyzing..." : "🚀 Analyze Seed"}
-                  </button>
-                  <button
-                    type='button'
-                    onClick={clearImage}
-                    className='bg-red-100 hover:bg-red-200 text-red-700 font-semibold py-3 px-6 rounded-lg transition focus:outline-none focus:ring-4 focus:ring-red-300'
-                  >
-                    ✕ Clear
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className='bg-white border-2 border-dashed border-purple-300 rounded-lg p-12 text-center'>
-                <div className='text-6xl mb-4'>🥔</div>
-                <p className='text-gray-500 text-sm'>
-                  No image selected yet. Click a button above to get started!
-                </p>
-              </div>
-            )}
+            <ImageUpload onResult={handlePrediction} />
           </div>
 
           {/* Results Section */}
           {result && (
-            <div className='bg-gradient-to-br from-green-50 to-emerald-50 p-6 rounded-xl border-2 border-green-300'>
+            <div ref={resultRef} className='bg-gradient-to-br from-green-50 to-emerald-50 p-6 rounded-xl border-2 border-green-300 transition-all'>
               <h2 className='text-2xl font-bold text-green-800 mb-4 flex items-center gap-2'>
                 ✅ Analysis Complete
               </h2>
+
+              {/* Raw model outputs: show all 4 model predictions */}
+              {rawOutput && (
+                <div className='grid grid-cols-1 md:grid-cols-4 gap-3 mb-4'>
+                  {[
+                    ["seed_readiness", "Seed Readiness"],
+                    ["sprout_length", "Sprout Length"],
+                    ["shrivel_level", "Shrivel Level"],
+                    ["damage_level", "Damage Level"],
+                  ].map(([key, title]) => {
+                    const val = rawOutput[key] || { label: "unknown", confidence: 0 };
+                    const labelText = String(val.label || "unknown").replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+                    const pct = Math.round((val.confidence || 0) * 100);
+                    return (
+                      <div key={key} className='bg-white rounded-lg p-3 shadow-sm flex flex-col items-start'>
+                        <div className='text-xs text-gray-500'>{title}</div>
+                        <div className='mt-2 text-lg font-semibold text-emerald-700'>{labelText}</div>
+                        <div className='mt-1 text-sm text-gray-600'>{pct}% confidence</div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
 
               {/* Readiness Status */}
               <div className='bg-white rounded-lg p-4 mb-4 shadow-md'>
@@ -221,21 +235,21 @@ export default function SeedReadinessPage() {
                   <div className='text-center'>
                     <div className='text-2xl mb-1'>📏</div>
                     <div className='text-xs text-gray-600'>Size</div>
-                    <div className='font-semibold text-purple-700'>
+                    <div className='font-semibold text-emerald-700'>
                       {result.quality.size}
                     </div>
                   </div>
                   <div className='text-center'>
                     <div className='text-2xl mb-1'>🎨</div>
                     <div className='text-xs text-gray-600'>Color</div>
-                    <div className='font-semibold text-purple-700'>
+                    <div className='font-semibold text-emerald-700'>
                       {result.quality.color}
                     </div>
                   </div>
                   <div className='text-center'>
                     <div className='text-2xl mb-1'>✨</div>
                     <div className='text-xs text-gray-600'>Texture</div>
-                    <div className='font-semibold text-purple-700'>
+                    <div className='font-semibold text-emerald-700'>
                       {result.quality.texture}
                     </div>
                   </div>
