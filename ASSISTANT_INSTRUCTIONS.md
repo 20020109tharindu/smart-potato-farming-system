@@ -1,257 +1,299 @@
-SMART POTATO FARMING SYSTEM – SPROUT LENGTH COMPONENT
-Step■by■step guide: from dataset to personalized feedback
-------------------------------------
-1. GOAL OF YOUR COMPONENT
-------------------------------------
-You are building the “Seed Readiness Predictor” for potatoes using images.
-From one or more photos, your system should:
-• Detect each seed potato in the image.
-• For each potato, estimate:
- – Sprout length category: SHORT / MEDIUM / LONG
- – Shriveling score: 0.0 (no shrivel) → 1.0 (severely shriveled)
- – Damage score: 0.0 (no damage) → 1.0 (severely damaged)
-• Combine these values to decide if each potato is READY or NOT READY for planting.
-• Give simple, personalized feedback to the farmer (which potatoes to keep/remove).
-This guide explains all steps, in simple English, starting from creating the dataset.
-------------------------------------
-2. DEFINE YOUR LABELS AND SCORES
-------------------------------------
-Before taking any photos, fix your labels and scoring rules. Use the same rules always.
-2.1 Sprout length categories
-You cannot measure exact centimetres easily in the field, so use three simple classes:
-• SHORT – very small buds / sprouts (about 0–1 cm)
-• MEDIUM – clearly visible sprouts (about 1–3 cm)
-• LONG – big, long sprouts (more than about 3 cm)
-For your project, you can decide “ideal” seed readiness range, for example:
-• Ideal sprout length for planting: MEDIUM
-• SHORT → not yet ready
-• LONG → maybe over■sprouted (can be fragile)
-2.2 Shriveling (wrinkling) score
-Shriveling shows how dry or old the potato is.
-Give a score between 0 and 1:
-• 0.0 → no shriveling (smooth skin)
-• 0.3 → little shriveling
-• 0.6 → clearly wrinkled
-• 1.0 → extremely shriveled
-You do not need to be perfect. Just be consistent.
-2.3 Damage score
-Damage means cuts, bruises, rotting, etc. on the surface.
-Again, give a score between 0 and 1:
-• 0.0 → no damage
-• 0.3 → small, minor marks
-• 0.6 → visible, worrying damage
-• 1.0 → heavy damage or rot
-2.4 Seed readiness decision
-Later, the model (or a simple rule) can use:
-• sprout_length_category
-• shrivel_score
-• damage_score
-to decide:
-• READY – good for planting
-• NOT READY – not suitable or needs more time
-Example simple rule:
-• READY if: sprout = MEDIUM AND shrivel_score < 0.5 AND damage_score < 0.5
-• Otherwise NOT READY
-You can adjust these thresholds based on agronomy advice.
-------------------------------------
-3. PLANNING YOUR DATASET
-------------------------------------
-3.1 What kind of photos?
-For your first version, use single■tuber images:
-• 1 potato per image
-• Clean, plain background (white paper or tile)
-• Good light (daylight or uniform indoor light)
-• Camera at fixed height (for example 30–40 cm above the potato)
-• Sprouts clearly visible
-Later, you can also add images with multiple potatoes. But start simple.
-3.2 How many images?
-For a student project, a realistic target:
-• 70–100 images per sprout length class (SHORT / MEDIUM / LONG)
-• Total ~200–300 images minimum for your first model
-More images → better results, but this is enough to train and demo.
-3.3 Category balance
-Try to capture a balanced dataset:
-• Similar number of SHORT, MEDIUM, LONG examples
-• Within each class, include:
- – Some smooth potatoes (low shrivel)
- – Some wrinkled potatoes (high shrivel)
- – Some damaged potatoes
-This helps the model generalize.
-------------------------------------
-4. CAPTURING IMAGES
-------------------------------------
-4.1 Setup
-• Place an A4 white paper on a flat surface (table, floor, etc.).
-• Put ONE potato tuber in the centre.
-• Keep the camera at a fixed height above the paper.
-• Make sure there are no strong shadows on the potato.
-4.2 Angles per potato
-For each potato:
-• Decide its sprout length category first (by eye): SHORT / MEDIUM / LONG.
-• Then take 3–5 photos from different angles:
- – Top view
- – Side view
- – Slight diagonal view
-All these photos belong to the same sprout category for that potato.
-4.3 File naming convention
-Use a consistent, informative file name, for example:
-potato_001_short_0.2_0.1.jpg
-potato_001_short_0.2_0.1_view2.jpg
-potato_001_short_0.2_0.1_view3.jpg
-Meaning:
-• 001 → potato ID
-• short → sprout length category
-• 0.2 → shriveling score
-• 0.1 → damage score
-• view2 → second angle of the same potato
-Another example:
-potato_025_medium_0.1_0.0.jpg (medium sprout, almost no shrivel, no damage)
-potato_046_long_0.7_0.8.jpg (long sprout, very shriveled, heavily damaged)
-You can also store these labels in a CSV file instead of the filename.
-------------------------------------
-5. ORGANIZING AND LABELING THE DATA
-------------------------------------
-Create a folder structure like:
+# Potato Seed Readiness Predictor — Implementation Guidance (Copilot)
+
+## 0) Goal (What we are building)
+A responsive web app (React) + Flask backend that:
+1) Farmer uploads (or captures) a potato seed photo
+2) Backend runs preprocessing (crop/remove background noise if possible)
+3) Model predicts:
+   - Readiness (Ready / Not Ready / Maybe)
+   - Sprout length category (Short / Medium / Long) OR readiness rules-based label
+   - Damage/quality category (Low / Medium / High) (optional, if you have this label)
+4) Backend returns a **personalized feedback message** in Sinhala/English with suggestions
+5) Admin can see model metrics and which model is currently active (best accuracy)
+
+---
+
+## 1) Decide the “Model Type” (Important)
+### You DO need Computer Vision (CV).
+Because:
+- Your input is images (potato seeds)
+- Background varies (buildings, people, tables, etc.)
+- You need to extract visual features (sprouts, damage, shape)
+
+**Simplest approach (fast + strong):**
+- Use an image classification CNN (Transfer Learning) and add preprocessing to reduce background.
+- If background is too noisy, use a **segmentation/cropping step** (CV) before classification.
+
+**We will implement:**
+A) Preprocess: auto-crop potato area (from background)
+B) Train: 3 classification models
+C) Use best model
+D) Return feedback rules-based
+
+---
+
+## 2) Dataset Plan (You already captured 700–800 images)
+### 2.1 Single potato per image vs multiple potatoes?
+**For readiness prediction, prefer:**
+- **One potato per image** for training (easier, more accurate)
+- Later you can support multi-potato by adding a detection step (optional)
+
+So:
+- **Training dataset:** mostly single potato images (recommended 800–1500)
+- **Optional multi-potato dataset:** later, for detection/segmentation
+
+### 2.2 Your images status (what’s good / what to fix)
+✅ Good:
+- White background images are excellent
+- Potato is visible and sharp
+
+⚠️ Needs improvement:
+- Images with buildings/people/background will reduce accuracy unless you crop.
+- Potato not centered is OK **if cropping is done**.
+- Distance changes are OK **if your dataset includes that variation** (it helps generalization).
+- But extremely far images (potato tiny) are bad.
+
+**Rule: potato must occupy at least 15–30% of image area.**
+
+---
+
+## 3) Folder Structure (Dataset + Labels)
+Create this structure in your repo (or in Google Drive if using Colab):
+
 dataset/
- train/
- images/
- labels.csv
- val/
- images/
- labels.csv
-5.1 labels.csv format
-Inside each labels.csv, you can have columns like:
-image_name, sprout_class, shrivel_score, damage_score, readiness_label
-potato_001_short_0.2_0.1.jpg, short, 0.2, 0.1, not_ready
-potato_025_medium_0.1_0.0.jpg, medium, 0.1, 0.0, ready
-potato_046_long_0.7_0.8.jpg, long, 0.7, 0.8, not_ready
-At the beginning, YOU decide the readiness_label using your simple rule.
-This CSV is the ground truth for training and testing the model.
-------------------------------------
-6. DESIGNING YOUR MODEL (HIGH LEVEL)
-------------------------------------
-You can use a CNN with multiple outputs (multi■task model), or separate models.
-Simpler approach for your project:
-• Model A – image classifier for sprout length (SHORT / MEDIUM / LONG)
-• Model B – regression model for shrivel_score (0–1)
-• Model C – regression model for damage_score (0–1)
-Later, you combine these three outputs into a final readiness decision in your backend
-logic.
-6.1 Training data
-• Input: image
-• Targets:
- – sprout_class (for Model A)
- – shrivel_score (for Model B)
- – damage_score (for Model C)
-You can implement these with:
-• PyTorch or TensorFlow/Keras on the backend
-• Use pre■trained CNN backbone (e.g. ResNet18, MobileNet) for faster training.
-------------------------------------
-7. TRAIN / VALIDATE / TEST
-------------------------------------
-7.1 Train/Val/Test split
-Split your dataset into three sets:
-• Train: 70% of images
-• Validation: 15% of images
-• Test: 15% of images
-Make sure the same potato ID does not appear in both train and test.
-7.2 Metrics
-For sprout_class (classification):
-• Accuracy – % of correct SHORT/MEDIUM/LONG predictions
-For shrivel_score and damage_score (regression):
-• Mean Absolute Error (MAE) – average absolute difference between true score and predicted
-score
-You do not need perfect numbers for your project, but show that:
-• Accuracy is reasonably high (for example >70%).
-• MAE is reasonably low (for example ≤0.15 on the 0–1 scale).
-------------------------------------
-8. BACKEND INTEGRATION (FLASK)
-------------------------------------
-Your backend (Flask) will:
-1. Receive image(s) from the web app (React frontend).
-2. Run the trained models (A, B, C) on each image.
-3. For each detected potato, produce:
- • sprout_class
- • shrivel_score
- • damage_score
-4. Apply readiness rules.
-5. Send JSON response back to the frontend.
-Example JSON response for one image with 3 potatoes:
-{
- "potatoes": [
- {
- "id": 1,
- "sprout_class": "medium",
- "shrivel_score": 0.2,
- "damage_score": 0.1,
- "ready": true
- },
- {
- "id": 2,
- "sprout_class": "short",
- "shrivel_score": 0.1,
- "damage_score": 0.0,
- "ready": false
- },
- {
- "id": 3,
- "sprout_class": "long",
- "shrivel_score": 0.7,
- "damage_score": 0.6,
- "ready": false
- }
- ],
- "overall_summary": "...some text..."
-}
-------------------------------------
-9. PERSONALIZED FEEDBACK LOGIC
-------------------------------------
-After you have the predictions, you create farmer■friendly messages.
-9.1 Per■potato feedback
-For each potato, decide feedback based on:
-• sprout_class
-• shrivel_score
-• damage_score
-Examples:
-• If sprout_class = medium AND shrivel_score < 0.5 AND damage_score < 0.5:
- → “This seed is READY for planting.”
-• If sprout_class = short:
- → “Sprouts are still short. You can wait a bit more before planting.”
-• If sprout_class = long:
- → “Sprouts are too long. Handle carefully or consider not using this tuber.”
-• If damage_score ≥ 0.7:
- → “This tuber is heavily damaged. Better to remove it.”
-• If shrivel_score ≥ 0.7:
- → “This tuber is very shriveled and dry. Not ideal as seed.”
-9.2 Image■level / lot■level feedback
-If one image (or one batch) has many potatoes, you can:
-• Count how many are READY vs NOT READY.
-• Highlight the worst potatoes (highest damage/shrivel).
-Example final message for the farmer:
-• “Out of 10 potatoes in this photo, 7 are good for planting.
- Potatoes 2, 5, and 9 are not recommended because they are too damaged or shriveled.”
-In the UI, you can:
-• Show the image.
-• Draw a box or outline around each bad potato.
-• Show a small text bubble: “Remove this one” or “Too damaged”.
-This is your personalized feedback.
-------------------------------------
-10. HOW THE WHOLE PIPELINE FLOWS
-------------------------------------
-1) You define labels (sprout_class) and scores (shrivel, damage).
-2) You capture images with a clean, consistent setup.
-3) You label each image (or each potato) with these values.
-4) You split data into train/val/test and train your models.
-5) You build a Flask API endpoint that runs the models and returns predictions.
-6) You write a simple rule■based layer that converts predictions into advice.
-7) Your React frontend allows the farmer to upload 1 or many photos.
-8) Backend processes images and sends results.
-9) Frontend shows visual highlights and text feedback:
- • which seeds to plant,
- • which to remove,
- • and a simple readiness summary.
-If you follow these steps, you will have:
-• A clear dataset creation method,
-• A working ML pipeline,
-• And a meaningful, personalized output for farmers –
- all based on your sprout■length component.
+  raw/
+    single/
+      IMG_0001.jpg
+      ...
+    noisy_background/
+      IMG_0200.jpg
+  processed/
+    images/
+    labels.csv
+  splits/
+    train/
+      images/
+      labels.csv
+    val/
+      images/
+      labels.csv
+    test/
+      images/
+      labels.csv
+
+---
+
+## 4) Labeling Strategy (fast + accurate)
+### 4.1 What labels should we store?
+Minimum:
+- `readiness` = {ready, not_ready, maybe}
+
+Optional (if your rubric includes these):
+- `sprout_length_cat` = {short, medium, long}
+- `damage_cat` = {low, medium, high}
+- `sprout_count` = integer (optional)
+- `notes` = text
+
+### 4.2 How to label quickly (recommended workflow)
+**Use a CSV label file** instead of drawing boxes for now.
+
+Create: `dataset/processed/labels.csv`
+
+Columns:
+- filename
+- readiness
+- sprout_length_cat
+- damage_cat
+- notes
+
+Example:
+filename,readiness,sprout_length_cat,damage_cat,notes
+IMG_0001.jpg,ready,medium,low,good sprouts
+IMG_0002.jpg,not_ready,short,low,too short
+IMG_0003.jpg,maybe,short,low,short but healthy
+
+**How to decide “maybe”?**
+Use it for borderline cases (ex: 1.5–2.5cm but good quality). This solves your “short sprout but still ready” problem.
+
+---
+
+## 5) Preprocessing Pipeline (Auto-crop + clean)
+We will implement a robust preprocessing function in Python (OpenCV):
+1) Resize (keep aspect ratio, max side 1024)
+2) Convert to HSV
+3) Detect white background (or detect potato region by non-white)
+4) Morphology clean
+5) Find largest contour
+6) Crop bounding box + add padding
+7) Output 224x224 for model
+
+This will make noisy background images usable.
+
+**Output:** cleaned image ready for model.
+
+---
+
+## 6) Train 3 Models (Pick best)
+Train in Google Colab or local if you have GPU.
+
+### Model A (Baseline): MobileNetV2 Transfer Learning
+- Fast, good accuracy
+
+### Model B: EfficientNetB0 Transfer Learning
+- Often better accuracy than MobileNet
+
+### Model C: ResNet50 Transfer Learning
+- Strong baseline, slightly heavier
+
+All models output `readiness` (3 classes).
+
+**Evaluation metrics:**
+- Accuracy
+- F1-score (macro)
+- Confusion matrix
+
+Save best model as:
+backend/models/best_model.keras
+backend/models/label_map.json
+
+---
+
+## 7) Flask Backend Implementation
+### 7.1 Backend endpoints
+Create these routes in Flask:
+
+POST `/api/predict`
+- form-data: `image` (file)
+- returns JSON:
+  - readiness_pred
+  - confidence
+  - feedback_text
+  - processed_image_preview (optional base64)
+  - model_name
+
+GET `/api/health`
+- returns {status: "ok"}
+
+GET `/api/model-info`
+- returns model metadata + accuracy + date trained
+
+### 7.2 Backend flow (predict)
+1) Receive image
+2) Run preprocessing (crop)
+3) Run model inference
+4) Generate feedback message
+5) Return JSON
+
+---
+
+## 8) Feedback Generator (Personalized to farmer)
+Create rules-based feedback based on prediction & confidence:
+
+Example rules:
+- If `ready` & conf > 0.70:
+  - "Your seed looks ready to plant. Sprouts are healthy. Plant soon to avoid breakage."
+- If `not_ready`:
+  - "Not ready yet. Keep in cool airy place. Avoid direct sunlight. Recheck in 3–5 days."
+- If `maybe` or confidence < 0.60:
+  - "Borderline. Please take another photo closer and ensure sprouts are visible."
+
+Also return “tips”:
+- Capture top view
+- Keep white background
+- Ensure potato is close enough
+- No blur
+
+Support Sinhala + English by storing templates or using simple mapping.
+
+---
+
+## 9) React Frontend (Mobile-first, camera upload)
+You are using Vite + React.
+
+### 9.1 Mobile camera capture input
+Use:
+`<input type="file" accept="image/*" capture="environment" />`
+
+This opens camera on mobile.
+
+### 9.2 UI Flow
+Page: `UploadSeed.jsx`
+- show camera upload button
+- show preview
+- send to backend `/api/predict`
+- display readiness result + confidence + feedback message
+
+### 9.3 API call
+Use `fetch` with `FormData`.
+
+---
+
+## 10) Accuracy Improvement Checklist (Dataset quality)
+Do these to improve accuracy quickly:
+1) Prefer top-view images (your best)
+2) Keep potato large in frame (15–30% of image)
+3) Avoid blur (tap to focus)
+4) Keep lighting consistent (shade is better than harsh sun)
+5) Include variation (different potatoes, different sprout lengths)
+6) Balance classes (try to have similar counts of ready / not_ready / maybe)
+7) Use preprocessing crop for all images (even clean ones)
+8) Use data augmentation in training (rotation, brightness, zoom)
+
+---
+
+## 11) What to implement NOW (order)
+1) Create dataset folder + move images into `raw/`
+2) Build preprocessing script -> generate `processed/images/`
+3) Create labeling CSV for processed images
+4) Create train/val/test split
+5) Train 3 models -> choose best -> export model
+6) Implement Flask `/api/predict` with preprocessing + inference
+7) Implement React upload/camera page + show feedback
+8) Add admin page to show model metrics + active model
+
+---
+
+## 12) Copilot Task List (give Copilot these tasks one by one)
+### Task 1: Preprocessing script
+“Create `backend/preprocess.py` with OpenCV functions to crop potato from white/noisy background and return 224x224 RGB.”
+
+### Task 2: Dataset builder
+“Create `backend/tools/build_processed_dataset.py` that reads `dataset/raw/**` images, runs preprocessing, writes into `dataset/processed/images`, and outputs a CSV template for labeling.”
+
+### Task 3: Split generator
+“Create `backend/tools/split_dataset.py` to split labels.csv into train/val/test and copy images accordingly.”
+
+### Task 4: Model training notebook
+“Create Colab-ready `train_models.ipynb` (MobileNetV2, EfficientNetB0, ResNet50), evaluate F1 macro, save best model + label map.”
+
+### Task 5: Flask inference
+“Update `backend/app.py`: add `/api/predict` endpoint that accepts image, preprocesses, loads model, predicts, and returns JSON + feedback.”
+
+### Task 6: React upload page
+“Create `frontend/src/pages/UploadSeed.jsx` with mobile camera input, preview, submit to `/api/predict`, display results.”
+
+### Task 7: Feedback templates
+“Create `backend/feedback.py` that returns English + Sinhala feedback based on prediction & confidence.”
+
+---
+
+## 13) Environment / Run commands
+### Backend
+- Create venv
+- pip install -r requirements.txt
+- python app.py
+
+### Frontend
+- npm install
+- npm run dev
+
+Use a proxy in Vite config OR call full backend URL.
+
+---
+
+## 14) Done Criteria
+- Farmer can capture/upload a photo on phone
+- Backend crops image automatically
+- Model returns readiness + confidence
+- UI shows clear feedback in user-friendly way
+- Admin can see which model is used and accuracy
