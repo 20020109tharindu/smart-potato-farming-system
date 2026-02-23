@@ -5,6 +5,7 @@ import Dashboard from "./pages/Dashboard";
 import InputPage from "./pages/InputPage";
 import ResultsPage from "./pages/ResultsPage";
 import RecommendationPage from "./pages/RecommendationPage";
+import SeedReadinessPage from "./pages/SeedReadinessPage";
 
 import SignIn from "./pages/SignIn";
 import SignUp from "./pages/SignUp";
@@ -31,8 +32,10 @@ function App() {
 
         {/* Protected */}
         <Route path='/app' element={<Layout />}>
-          {/* Empty routes (no dashboard) */}
-          <Route path='seed-readiness' element={null} />
+          {/* Seed Readiness */}
+          <Route path='seed-readiness' element={<SeedReadinessPage />} />
+          
+          {/* Empty routes (coming soon) */}
           <Route path='soil-health' element={null} />
           <Route path='disease' element={null} />
 
