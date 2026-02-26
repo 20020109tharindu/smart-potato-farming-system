@@ -1,13 +1,6 @@
-import { useTranslation } from "react-i18next";
-
+// simplified formatting utilities; locale is fixed to en-LK
 export function useLocaleFormat() {
-  const { i18n } = useTranslation();
-  const lang = i18n.language || "en";
-  const locale = lang.startsWith("si")
-    ? "si-LK"
-    : lang.startsWith("ta")
-    ? "ta-LK"
-    : "en-LK";
+  const locale = "en-LK";
 
   const currency = (num) =>
     new Intl.NumberFormat(locale, {

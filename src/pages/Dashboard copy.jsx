@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useTranslation } from "react-i18next";
+
+// translation stub
+const t = (key, opts) => (opts && opts.defaultValue) || key;
 
 export default function Dashboard() {
   const { t } = useTranslation();
@@ -143,7 +145,6 @@ export default function Dashboard() {
             </div>
             <div className='hidden md:block shrink-0'>
               <div className='flex items-center space-x-4'>
-                <LanguageSwitcher />
                 <div className='text-right'>
                   <p className='text-xs text-gray-600'>
                     {t("dashboard.welcome", { defaultValue: "Welcome back," })}
@@ -217,8 +218,8 @@ export default function Dashboard() {
                   card.color?.includes("green")
                     ? "green-300"
                     : card.color?.includes("blue")
-                    ? "blue-300"
-                    : "purple-300"
+                      ? "blue-300"
+                      : "purple-300"
                 } cursor-pointer`}
                 onMouseEnter={() => setHoveredCard(i)}
                 onMouseLeave={() => setHoveredCard(null)}

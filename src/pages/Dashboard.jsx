@@ -1,9 +1,8 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-
 export default function Dashboard() {
-   const navigate = useNavigate();
+  const navigate = useNavigate();
   const [hoveredCard, setHoveredCard] = useState(null);
 
   const cards = [
@@ -89,7 +88,7 @@ export default function Dashboard() {
 
   const handleNavigate = (path) => {
     console.log("Navigate to:", path);
-     navigate(path);
+    navigate(path);
   };
 
   return (
@@ -414,7 +413,7 @@ export default function Dashboard() {
           <div className='grid grid-cols-1 md:grid-cols-3 gap-6'>
             <div className='bg-white rounded-2xl p-6 shadow-sm hover:shadow-lg transition'>
               <div className='text-3xl mb-3'>🌱</div>
-              <h4 className='font-bold text-gray-800 mb-2'>Soil Management</h4>
+              <h4 className='font-bold text-gray-800 mb-2'> Seed Readiness</h4>
               <p className='text-sm text-gray-600'>
                 Update soil test results every season for accurate yield
                 predictions
@@ -422,9 +421,7 @@ export default function Dashboard() {
             </div>
             <div className='bg-white rounded-2xl p-6 shadow-sm hover:shadow-lg transition'>
               <div className='text-3xl mb-3'>🌤️</div>
-              <h4 className='font-bold text-gray-800 mb-2'>
-                Weather Monitoring
-              </h4>
+              <h4 className='font-bold text-gray-800 mb-2'>Soil Health</h4>
               <p className='text-sm text-gray-600'>
                 Track forecasts to optimize fertilizer application timing
               </p>
@@ -432,7 +429,7 @@ export default function Dashboard() {
             <div className='bg-white rounded-2xl p-6 shadow-sm hover:shadow-lg transition'>
               <div className='text-3xl mb-3'>📊</div>
               <h4 className='font-bold text-gray-800 mb-2'>
-                Scenario Planning
+                Diesease Predictor
               </h4>
               <p className='text-sm text-gray-600'>
                 Compare multiple scenarios before making final planting
