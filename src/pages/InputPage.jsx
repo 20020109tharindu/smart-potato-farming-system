@@ -719,7 +719,7 @@ const InputPage = () => {
                         <option value='Clay_Loam'>
                           Clay Loam — water-retentive
                         </option>
-                        <option value='Sandy'>Sandy — well-draining</option>
+                        <option value='Sandy_Loam'>Sandy — well-draining</option>
                         <option value='Loamy'>Loamy — nutrient-rich</option>
                       </select>
                     </div>
