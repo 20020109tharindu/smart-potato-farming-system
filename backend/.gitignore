@@ -1,6 +1,5 @@
 # --- ML model weights (do not commit) ---
 backend/models/
-backend/labels/
 *.h5
 *.keras
 *.pt
