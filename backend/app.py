@@ -36,4 +36,5 @@ def health():
     return jsonify({"message": "ok"})
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    # Use debug mode but disable auto-reloader to prevent duplicate model loading
+    app.run(debug=True, use_reloader=False)
