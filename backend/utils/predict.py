@@ -73,20 +73,21 @@ def extract_file_id(url):
 
 def download_from_google_drive(file_id, destination, validate_keras=True):
     print(f"Downloading model: {destination}")
-    url = f"https://drive.google.com/uc?id={file_id}"
-    response = requests.get(url, stream=True)
+    try:
+        import gdown
+        url = f"https://drive.google.com/uc?id={file_id}"
+        gdown.download(url, destination, quiet=False)
+    except Exception as e:
+        raise RuntimeError(
+            f"Failed to download model from Google Drive: {e}. "
+            "Ensure the link is shared as 'Anyone with the link can view'."
+        ) from e
 
-    temp_path = destination + ".download"
-    with open(temp_path, "wb") as f:
-        for chunk in response.iter_content(32768):
-            if chunk:
-                f.write(chunk)
+    if validate_keras and not is_valid_keras_file(destination):
+        if os.path.exists(destination):
+            os.remove(destination)
+        raise ValueError("Downloaded file is not a valid .keras model. Check the Drive share link.")
 
-    if validate_keras and not is_valid_keras_file(temp_path):
-        os.remove(temp_path)
-        raise ValueError("Downloaded file is not a valid .keras model.")
-
-    os.replace(temp_path, destination)
     print("Download complete.")
 
 
