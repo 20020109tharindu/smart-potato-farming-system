@@ -3,7 +3,7 @@ import { Outlet, Navigate } from "react-router-dom";
 import Header from "./header";
 import Sidebar from "./sidebar";
 import Footer from "./footer";
-import { useAuth } from "../contexts/AuthContext";
+import { useAuth } from "./contexts/AuthContext";
 
 export default function Layout() {
   const { currentUser } = useAuth();
