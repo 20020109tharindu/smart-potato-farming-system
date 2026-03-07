@@ -56,15 +56,60 @@ DISEASE_RECOMMENDATIONS = {
 
 _disease_model = None
 
+
+def _download_disease_model_if_needed():
+    """Download disease.h5 from Google Drive if not present locally."""
+    if os.path.exists(DISEASE_MODEL_PATH) and os.path.getsize(DISEASE_MODEL_PATH) > 1024 * 100:
+        return  # already downloaded
+
+    config_path = os.path.join(BASE_DIR, "model_config.json")
+    if not os.path.exists(config_path):
+        return
+
+    import json
+    with open(config_path) as f:
+        config = json.load(f)
+
+    if not config.get("auto_download", False):
+        return
+
+    url = config.get("google_drive_urls", {}).get("disease_model")
+    if not url:
+        return
+
+    # Extract Google Drive file ID
+    if "/file/d/" in url:
+        file_id = url.split("/file/d/")[1].split("/")[0]
+    elif "id=" in url:
+        file_id = url.split("id=")[1].split("&")[0]
+    else:
+        file_id = url
+
+    os.makedirs(os.path.dirname(DISEASE_MODEL_PATH), exist_ok=True)
+    print(f"[Disease Model] Downloading disease.h5 from Google Drive...")
+    try:
+        import gdown
+        gdown.download(f"https://drive.google.com/uc?id={file_id}", DISEASE_MODEL_PATH, quiet=False)
+        print("[Disease Model] Download complete.")
+    except Exception as e:
+        if os.path.exists(DISEASE_MODEL_PATH):
+            os.remove(DISEASE_MODEL_PATH)
+        raise RuntimeError(
+            f"Failed to download disease.h5 from Google Drive: {e}. "
+            "Make sure the file is shared as 'Anyone with the link can view'."
+        ) from e
+
+
 def get_disease_model():
-    """Lazy-load the disease model so the server starts even without the model file."""
+    """Lazy-load the disease model, auto-downloading from Google Drive if needed."""
     global _disease_model
     if _disease_model is not None:
         return _disease_model
+    _download_disease_model_if_needed()
     if not os.path.exists(DISEASE_MODEL_PATH):
         raise FileNotFoundError(
             f"disease.h5 not found at {DISEASE_MODEL_PATH}. "
-            "Please copy your model file to backend/models/disease.h5"
+            "Add your Google Drive link to model_config.json under 'disease_model'."
         )
     import tensorflow as tf
     _disease_model = tf.keras.models.load_model(DISEASE_MODEL_PATH, compile=False)
