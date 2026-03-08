@@ -1,5 +1,6 @@
 from flask import Flask, request, jsonify
-import os, uuid
+import os, uuid, json
+from datetime import datetime
 import numpy as np
 import pandas as pd
 import pickle
@@ -626,6 +627,64 @@ def predict_from_esp32():
     finally:
         if os.path.exists(file_path):
             os.remove(file_path)
+
+
+# ── Disease Map reports ───────────────────────────────────────────────────────
+REPORTS_FILE = os.path.join(BASE_DIR, "disease_reports.json")
+
+
+def _load_reports():
+    if os.path.exists(REPORTS_FILE):
+        with open(REPORTS_FILE, "r") as f:
+            return json.load(f)
+    return []
+
+
+def _save_reports(reports):
+    with open(REPORTS_FILE, "w") as f:
+        json.dump(reports, f, indent=2)
+
+
+@app.route("/api/disease-reports", methods=["GET"])
+def get_disease_reports():
+    """Return all disease location reports."""
+    return jsonify(_load_reports())
+
+
+@app.route("/api/disease-reports", methods=["POST"])
+def add_disease_report():
+    """Add a new disease location report."""
+    data = request.get_json(force=True)
+    required = ["lat", "lng", "disease", "severity"]
+    missing = [k for k in required if k not in data]
+    if missing:
+        return jsonify({"error": f"Missing fields: {', '.join(missing)}"}), 400
+
+    report = {
+        "id": str(uuid.uuid4()),
+        "lat": float(data["lat"]),
+        "lng": float(data["lng"]),
+        "disease": data["disease"],
+        "severity": data["severity"],
+        "note": data.get("note", ""),
+        "date": data.get("date", datetime.now().strftime("%Y-%m-%d")),
+        "created_at": datetime.now().isoformat(),
+    }
+    reports = _load_reports()
+    reports.append(report)
+    _save_reports(reports)
+    return jsonify(report), 201
+
+
+@app.route("/api/disease-reports/<report_id>", methods=["DELETE"])
+def delete_disease_report(report_id):
+    """Delete a disease report by id."""
+    reports = _load_reports()
+    filtered = [r for r in reports if r["id"] != report_id]
+    if len(filtered) == len(reports):
+        return jsonify({"error": "Report not found"}), 404
+    _save_reports(filtered)
+    return jsonify({"deleted": report_id})
 
 
 # ── Health check ─────────────────────────────────────────────────────────────

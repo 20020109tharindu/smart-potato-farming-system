@@ -1,8 +1,18 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import axios from "axios";
+import {
+  MapContainer,
+  TileLayer,
+  Marker,
+  Popup,
+  useMapEvents,
+} from "react-leaflet";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
 
 const API_URL        = "http://127.0.0.1:5000/api/predict-disease";
 const ESP32_API_URL  = "http://127.0.0.1:5000/api/predict-from-esp32";
+const REPORTS_API    = "http://127.0.0.1:5000/api/disease-reports";
 
 const CLASS_CONFIG = {
   "Early Blight": {
@@ -305,17 +315,115 @@ function SeverityGauge({ confidence, predicted, cfg }) {
   );
 }
 
+// ── Disease Map helpers ───────────────────────────────────────────────────────
+const MAP_COLORS = {
+  "Early Blight": "#f97316",
+  "Late Blight": "#ef4444",
+  Healthy: "#22c55e",
+  Unknown: "#6b7280",
+};
+
+const MAP_SEVERITY_BADGE = {
+  Low: "bg-yellow-100 text-yellow-800",
+  Moderate: "bg-orange-100 text-orange-800",
+  High: "bg-red-100 text-red-800",
+  "Very High": "bg-red-200 text-red-900",
+};
+
+function mapMarkerIcon(color = "#ef4444") {
+  const svg = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="40" viewBox="0 0 28 40">
+      <path d="M14 0C6.3 0 0 6.3 0 14c0 10.5 14 26 14 26s14-15.5 14-26C28 6.3 21.7 0 14 0z"
+            fill="${color}" stroke="#fff" stroke-width="1.5"/>
+      <circle cx="14" cy="14" r="6" fill="#fff"/>
+    </svg>`;
+  return L.divIcon({
+    html: svg,
+    className: "",
+    iconSize: [28, 40],
+    iconAnchor: [14, 40],
+    popupAnchor: [0, -36],
+  });
+}
+
+const MAP_BLUE_ICON = mapMarkerIcon("#3b82f6");
+
+function MapClickHandler({ onMapClick }) {
+  useMapEvents({ click(e) { onMapClick(e.latlng); } });
+  return null;
+}
+
 export default function DiseasePredictor() {
+  /* ── Page-level tab: predictor vs map ── */
+  const [pageTab, setPageTab] = useState("predictor");
+
   const [file, setFile] = useState(null);
   const [preview, setPreview] = useState(null);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
-  const [esp32Ip, setEsp32Ip] = useState("172.20.10.2");
+  const [esp32Ip, setEsp32Ip] = useState("10.27.132.16");
   const [esp32Loading, setEsp32Loading] = useState(false);
   const [liveMode, setLiveMode] = useState(false);
-  const [streamKey, setStreamKey] = useState(0); // force reload stream
+  const [streamKey, setStreamKey] = useState(0);
   const inputRef = useRef(null);
+
+  /* ── Map state ── */
+  const [reports, setReports] = useState([]);
+  const [reportsLoading, setReportsLoading] = useState(true);
+  const [formOpen, setFormOpen] = useState(false);
+  const [clickedPos, setClickedPos] = useState(null);
+  const [mapForm, setMapForm] = useState({
+    disease: "Early Blight",
+    severity: "Moderate",
+    note: "",
+    date: new Date().toISOString().slice(0, 10),
+  });
+  const [mapSubmitting, setMapSubmitting] = useState(false);
+
+  /* ── Fetch reports ── */
+  const fetchReports = useCallback(async () => {
+    try {
+      const res = await fetch(REPORTS_API);
+      const data = await res.json();
+      setReports(data);
+    } catch (err) {
+      console.error("Failed to fetch disease reports", err);
+    } finally {
+      setReportsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchReports();
+  }, [fetchReports]);
+
+  const handleMapClick = (latlng) => { setClickedPos(latlng); setFormOpen(true); };
+
+  const handleMapSubmit = async (e) => {
+    e.preventDefault();
+    setMapSubmitting(true);
+    try {
+      const res = await fetch(REPORTS_API, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ lat: clickedPos.lat, lng: clickedPos.lng, ...mapForm }),
+      });
+      if (res.ok) {
+        setFormOpen(false);
+        setClickedPos(null);
+        setMapForm({ disease: "Early Blight", severity: "Moderate", note: "", date: new Date().toISOString().slice(0, 10) });
+        fetchReports();
+      }
+    } catch (err) { console.error("Failed to add report", err); }
+    finally { setMapSubmitting(false); }
+  };
+
+  const handleDeleteReport = async (id) => {
+    if (!window.confirm("Delete this disease report?")) return;
+    try { await fetch(`${REPORTS_API}/${id}`, { method: "DELETE" }); fetchReports(); }
+    catch (err) { console.error("Failed to delete report", err); }
+  };
 
   function handleFileChange(e) {
     const f = e.target.files?.[0] || null;
@@ -396,13 +504,198 @@ export default function DiseasePredictor() {
       {/* ── Top Banner ── */}
       <div className="bg-gradient-to-r from-emerald-700 to-green-600 px-8 py-6 flex items-center gap-4">
         <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center text-white text-xl">✓</div>
-        <div>
+        <div className="flex-1">
           <h1 className="text-2xl font-bold text-white">Potato Leaf Disease Predictor</h1>
           <p className="text-green-100 text-sm">Advanced AI-powered disease analysis and fertilizer recommendations</p>
         </div>
+        {/* Page-level tabs */}
+        <div className="flex bg-white/15 rounded-xl p-1 text-sm font-semibold">
+          <button
+            onClick={() => setPageTab("predictor")}
+            className={`px-5 py-2 rounded-lg transition-all ${
+              pageTab === "predictor" ? "bg-white text-emerald-700 shadow" : "text-white/80 hover:text-white hover:bg-white/10"
+            }`}
+          >
+            🔬 Predictor
+          </button>
+          <button
+            onClick={() => setPageTab("map")}
+            className={`px-5 py-2 rounded-lg transition-all ${
+              pageTab === "map" ? "bg-white text-emerald-700 shadow" : "text-white/80 hover:text-white hover:bg-white/10"
+            }`}
+          >
+            🗺️ Disease Map
+          </button>
+        </div>
       </div>
 
-      {/* ── Two-Column Layout ── */}
+      {/* ═══════════════ MAP VIEW ═══════════════ */}
+      {pageTab === "map" ? (
+        <div className="flex flex-col" style={{ height: "calc(100vh - 140px)" }}>
+          {/* Map legend bar */}
+          <div className="bg-white border-b px-6 py-3 flex items-center justify-between">
+            <p className="text-sm text-gray-500">
+              Click anywhere on the map to report a diseased area. All users can see these pins.
+            </p>
+            <div className="flex items-center gap-4 text-xs">
+              {Object.entries(MAP_COLORS).map(([name, color]) => (
+                <span key={name} className="flex items-center gap-1">
+                  <span className="inline-block w-3 h-3 rounded-full border" style={{ backgroundColor: color }} />
+                  {name}
+                </span>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex flex-1 overflow-hidden relative">
+            {/* Leaflet map */}
+            <div className="flex-1">
+              <MapContainer
+                center={[7.8731, 80.7718]}
+                zoom={8}
+                className="w-full h-full z-0"
+                style={{ height: "100%", width: "100%" }}
+              >
+                <TileLayer
+                  attribution='&copy; <a href="https://osm.org/copyright">OpenStreetMap</a>'
+                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                />
+                <MapClickHandler onMapClick={handleMapClick} />
+
+                {clickedPos && (
+                  <Marker position={[clickedPos.lat, clickedPos.lng]} icon={MAP_BLUE_ICON}>
+                    <Popup>New report location</Popup>
+                  </Marker>
+                )}
+
+                {reports.map((r) => (
+                  <Marker
+                    key={r.id}
+                    position={[r.lat, r.lng]}
+                    icon={mapMarkerIcon(MAP_COLORS[r.disease] || MAP_COLORS.Unknown)}
+                  >
+                    <Popup>
+                      <div className="text-sm min-w-[180px]">
+                        <p className="font-bold text-base mb-1">{r.disease}</p>
+                        <p>
+                          <span className="font-medium">Severity:</span>{" "}
+                          <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${MAP_SEVERITY_BADGE[r.severity] || ""}`}>
+                            {r.severity}
+                          </span>
+                        </p>
+                        {r.note && <p className="mt-1 text-gray-600 italic">"{r.note}"</p>}
+                        <p className="text-gray-400 mt-1 text-xs">📅 {r.date}</p>
+                        <p className="text-gray-400 text-xs">📍 {r.lat.toFixed(5)}, {r.lng.toFixed(5)}</p>
+                        <button onClick={() => handleDeleteReport(r.id)} className="mt-2 text-xs text-red-600 hover:text-red-800 underline">
+                          🗑️ Delete
+                        </button>
+                      </div>
+                    </Popup>
+                  </Marker>
+                ))}
+              </MapContainer>
+            </div>
+
+            {/* Side panel */}
+            <div className="w-80 bg-white border-l overflow-y-auto">
+              {formOpen && clickedPos ? (
+                <form onSubmit={handleMapSubmit} className="p-4 border-b space-y-3">
+                  <h3 className="font-semibold text-gray-800 text-lg">📌 Add Disease Report</h3>
+                  <p className="text-xs text-gray-500">
+                    Location: {clickedPos.lat.toFixed(5)}, {clickedPos.lng.toFixed(5)}
+                  </p>
+
+                  <label className="block">
+                    <span className="text-sm font-medium text-gray-700">Disease</span>
+                    <select value={mapForm.disease} onChange={(e) => setMapForm({ ...mapForm, disease: e.target.value })}
+                      className="w-full mt-1 border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-green-500 outline-none">
+                      <option>Early Blight</option>
+                      <option>Late Blight</option>
+                      <option>Healthy</option>
+                      <option>Unknown</option>
+                    </select>
+                  </label>
+
+                  <label className="block">
+                    <span className="text-sm font-medium text-gray-700">Severity</span>
+                    <select value={mapForm.severity} onChange={(e) => setMapForm({ ...mapForm, severity: e.target.value })}
+                      className="w-full mt-1 border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-green-500 outline-none">
+                      <option>Low</option>
+                      <option>Moderate</option>
+                      <option>High</option>
+                      <option>Very High</option>
+                    </select>
+                  </label>
+
+                  <label className="block">
+                    <span className="text-sm font-medium text-gray-700">Date</span>
+                    <input type="date" value={mapForm.date} onChange={(e) => setMapForm({ ...mapForm, date: e.target.value })}
+                      className="w-full mt-1 border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-green-500 outline-none" />
+                  </label>
+
+                  <label className="block">
+                    <span className="text-sm font-medium text-gray-700">Note (optional)</span>
+                    <textarea value={mapForm.note} onChange={(e) => setMapForm({ ...mapForm, note: e.target.value })}
+                      rows={2} className="w-full mt-1 border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-green-500 outline-none resize-none"
+                      placeholder="E.g. Severe infection on 2 acres..." />
+                  </label>
+
+                  <div className="flex gap-2">
+                    <button type="submit" disabled={mapSubmitting}
+                      className="flex-1 bg-green-600 hover:bg-green-700 text-white text-sm font-medium py-2 rounded-md disabled:opacity-50">
+                      {mapSubmitting ? "Saving…" : "💾 Save Report"}
+                    </button>
+                    <button type="button" onClick={() => { setFormOpen(false); setClickedPos(null); }}
+                      className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 text-sm font-medium py-2 rounded-md">
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                <div className="p-4 border-b bg-green-50">
+                  <p className="text-sm text-green-800 font-medium">👆 Click on the map to add a new disease report</p>
+                </div>
+              )}
+
+              {/* Report list */}
+              <div className="p-4">
+                <h3 className="font-semibold text-gray-800 mb-3">📋 Reports ({reports.length})</h3>
+                {reportsLoading ? (
+                  <p className="text-sm text-gray-400">Loading…</p>
+                ) : reports.length === 0 ? (
+                  <p className="text-sm text-gray-400">No reports yet. Click the map to add one.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {[...reports].reverse().map((r) => (
+                      <div key={r.id} className="border rounded-lg p-3 hover:shadow-sm transition-shadow">
+                        <div className="flex items-center justify-between">
+                          <span className="flex items-center gap-1.5">
+                            <span className="inline-block w-2.5 h-2.5 rounded-full"
+                              style={{ backgroundColor: MAP_COLORS[r.disease] || MAP_COLORS.Unknown }} />
+                            <span className="font-medium text-sm">{r.disease}</span>
+                          </span>
+                          <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${MAP_SEVERITY_BADGE[r.severity] || ""}`}>
+                            {r.severity}
+                          </span>
+                        </div>
+                        {r.note && <p className="text-xs text-gray-500 mt-1 italic truncate">{r.note}</p>}
+                        <div className="flex items-center justify-between mt-1.5">
+                          <span className="text-[10px] text-gray-400">
+                            📅 {r.date} &nbsp;·&nbsp; 📍{r.lat.toFixed(4)}, {r.lng.toFixed(4)}
+                          </span>
+                          <button onClick={() => handleDeleteReport(r.id)} className="text-[10px] text-red-400 hover:text-red-600">✕</button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : (
+
+      /* ═══════════════ PREDICTOR VIEW ═══════════════ */
       <div className="p-6 grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-7xl mx-auto">
 
         {/* ══ LEFT — Upload ══ */}
@@ -451,7 +744,7 @@ export default function DiseasePredictor() {
                 <p className="text-xs text-center text-gray-400 mt-1">Live feed · {streamUrl()}</p>
               </div>
             ) : (
-            /* ── Upload / Drop zone ── */}
+            <>
             <div
               className={`rounded-xl overflow-hidden border-2 border-dashed transition-colors cursor-pointer mb-4
                 ${preview ? "border-emerald-300 bg-emerald-50" : "border-gray-200 bg-gray-50 hover:border-emerald-300"}`}
@@ -484,7 +777,8 @@ export default function DiseasePredictor() {
             </div>
 
             <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
-            )} {/* end liveMode else */}
+            </>
+            )}
 
             {error && (
               <div className="mb-4 bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 text-sm flex items-start gap-2">
@@ -776,6 +1070,7 @@ export default function DiseasePredictor() {
 
         </div>
       </div>
+      )}
     </div>
   );
 }
