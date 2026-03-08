@@ -313,6 +313,8 @@ export default function DiseasePredictor() {
   const [error, setError] = useState(null);
   const [esp32Ip, setEsp32Ip] = useState("172.20.10.2");
   const [esp32Loading, setEsp32Loading] = useState(false);
+  const [liveMode, setLiveMode] = useState(false);
+  const [streamKey, setStreamKey] = useState(0); // force reload stream
   const inputRef = useRef(null);
 
   function handleFileChange(e) {
@@ -330,6 +332,11 @@ export default function DiseasePredictor() {
     setResult(null);
     setError(null);
     if (inputRef.current) inputRef.current.value = "";
+  }
+
+  function streamUrl() {
+    const ip = esp32Ip.replace(/^https?:\/\//, "");
+    return `http://${ip}:81/stream`;
   }
 
   async function analyze(e) {
@@ -402,14 +409,49 @@ export default function DiseasePredictor() {
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
           <div className="px-6 py-4 border-b border-gray-100 flex items-center gap-3">
             <div className="w-9 h-9 bg-emerald-100 rounded-lg flex items-center justify-center text-emerald-700 text-lg">🖼</div>
-            <div>
+            <div className="flex-1">
               <h2 className="font-semibold text-gray-800">Upload Leaf</h2>
               <p className="text-xs text-gray-500">Select a high-quality image</p>
+            </div>
+            {/* Tab toggle */}
+            <div className="flex bg-gray-100 rounded-lg p-1 text-xs font-semibold">
+              <button
+                onClick={() => setLiveMode(false)}
+                className={`px-3 py-1.5 rounded-md transition-all ${
+                  !liveMode ? "bg-white text-emerald-700 shadow" : "text-gray-500 hover:text-gray-700"
+                }`}
+              >
+                📁 Upload
+              </button>
+              <button
+                onClick={() => { setLiveMode(true); setStreamKey(k => k + 1); }}
+                className={`px-3 py-1.5 rounded-md transition-all ${
+                  liveMode ? "bg-white text-blue-600 shadow" : "text-gray-500 hover:text-gray-700"
+                }`}
+              >
+                📹 Live
+              </button>
             </div>
           </div>
 
           <div className="p-6">
-            {/* Drop zone */}
+            {/* ── Live stream view ── */}
+            {liveMode ? (
+              <div className="mb-4">
+                <div className="rounded-xl overflow-hidden border-2 border-blue-200 bg-black" style={{ minHeight: 260 }}>
+                  <img
+                    key={streamKey}
+                    src={streamUrl()}
+                    alt="ESP32-CAM Live"
+                    className="w-full object-contain"
+                    style={{ maxHeight: 280 }}
+                    onError={() => setError("Stream failed. Check ESP32 IP and make sure it's on the same WiFi.")}
+                  />
+                </div>
+                <p className="text-xs text-center text-gray-400 mt-1">Live feed · {streamUrl()}</p>
+              </div>
+            ) : (
+            /* ── Upload / Drop zone ── */}
             <div
               className={`rounded-xl overflow-hidden border-2 border-dashed transition-colors cursor-pointer mb-4
                 ${preview ? "border-emerald-300 bg-emerald-50" : "border-gray-200 bg-gray-50 hover:border-emerald-300"}`}
@@ -442,6 +484,7 @@ export default function DiseasePredictor() {
             </div>
 
             <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
+            )} {/* end liveMode else */}
 
             {error && (
               <div className="mb-4 bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 text-sm flex items-start gap-2">
@@ -483,7 +526,7 @@ export default function DiseasePredictor() {
             <div className="mt-4 pt-4 border-t border-gray-100">
               <div className="flex items-center gap-2 mb-3">
                 <span className="text-base">📷</span>
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">ESP32-CAM Live Capture</p>
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">ESP32-CAM</p>
               </div>
               <div className="flex gap-2 mb-2">
                 <input
@@ -491,16 +534,15 @@ export default function DiseasePredictor() {
                   value={esp32Ip}
                   onChange={(e) => setEsp32Ip(e.target.value)}
                   placeholder="172.20.10.2"
-                  className="flex-1 text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-300 font-mono"
+                  className="flex-1 text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-300 font-mono"
                 />
-                <a
-                  href={`http://${esp32Ip}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="px-3 py-2 text-xs rounded-lg border border-blue-200 text-blue-600 hover:bg-blue-50 font-medium whitespace-nowrap"
+                <button
+                  onClick={() => { setLiveMode(true); setStreamKey(k => k + 1); setError(null); }}
+                  className="px-3 py-2 text-xs rounded-lg border border-blue-200 text-blue-600 hover:bg-blue-50 font-semibold whitespace-nowrap"
+                  title="Open live stream"
                 >
-                  🔴 Live
-                </a>
+                  📺 Stream
+                </button>
               </div>
               <button
                 onClick={captureFromESP32}
