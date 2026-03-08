@@ -576,6 +576,58 @@ def predict_disease():
             os.remove(file_path)
 
 
+# ── ESP32-CAM capture & predict ──────────────────────────────────────────────
+@app.route("/api/predict-from-esp32", methods=["POST"])
+def predict_from_esp32():
+    """Fetch a JPEG from ESP32-CAM /capture, run disease prediction, return same JSON as /predict-disease."""
+    data = request.get_json(silent=True) or {}
+    esp32_ip = data.get("esp32_ip", "172.20.10.2").strip().rstrip("/")
+    if not esp32_ip.startswith("http"):
+        esp32_ip = "http://" + esp32_ip
+    capture_url = esp32_ip + "/capture"
+
+    file_path = os.path.join(UPLOAD_DIR, f"esp32_{uuid.uuid4().hex}.jpg")
+    try:
+        import urllib.request
+        req = urllib.request.Request(capture_url, headers={"User-Agent": "SmartPotato/1.0"})
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            img_bytes = resp.read()
+        with open(file_path, "wb") as f:
+            f.write(img_bytes)
+
+        model = get_disease_model()
+        img_tensor = preprocess_disease_image(file_path)
+        preds = model.predict(img_tensor, verbose=0)[0]
+        predicted_idx = int(np.argmax(preds))
+        confidence = float(preds[predicted_idx])
+        class_name = (
+            DISEASE_CLASSES[predicted_idx]
+            if predicted_idx < len(DISEASE_CLASSES)
+            else f"Class {predicted_idx}"
+        )
+        rec = DISEASE_RECOMMENDATIONS.get(class_name, DISEASE_RECOMMENDATIONS["Healthy"])
+        class_probs = [
+            {"class": (DISEASE_CLASSES[i] if i < len(DISEASE_CLASSES) else f"Class {i}"),
+             "probability": round(float(preds[i]) * 100, 1)}
+            for i in range(len(preds))
+        ]
+        viz = generate_disease_visualizations(file_path, class_name)
+        return jsonify({
+            "success": True,
+            "predicted_class": class_name,
+            "confidence": round(confidence * 100, 1),
+            "class_probabilities": class_probs,
+            "recommendation": rec,
+            "visualizations": viz,
+            "source": "esp32",
+        })
+    except Exception as e:
+        return jsonify({"error": f"ESP32 capture failed: {e}"}), 500
+    finally:
+        if os.path.exists(file_path):
+            os.remove(file_path)
+
+
 # ── Health check ─────────────────────────────────────────────────────────────
 @app.route("/api/health", methods=["GET"])
 def health():
