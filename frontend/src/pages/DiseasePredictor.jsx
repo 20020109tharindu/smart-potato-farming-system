@@ -1,7 +1,8 @@
 import { useState, useRef } from "react";
 import axios from "axios";
 
-const API_URL = "http://127.0.0.1:5000/api/predict-disease";
+const API_URL        = "http://127.0.0.1:5000/api/predict-disease";
+const ESP32_API_URL  = "http://127.0.0.1:5000/api/predict-from-esp32";
 
 const CLASS_CONFIG = {
   "Early Blight": {
@@ -310,6 +311,8 @@ export default function DiseasePredictor() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
+  const [esp32Ip, setEsp32Ip] = useState("172.20.10.2");
+  const [esp32Loading, setEsp32Loading] = useState(false);
   const inputRef = useRef(null);
 
   function handleFileChange(e) {
@@ -351,6 +354,30 @@ export default function DiseasePredictor() {
       );
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function captureFromESP32() {
+    setEsp32Loading(true);
+    setError(null);
+    setResult(null);
+    setPreview(null);
+    setFile(null);
+    try {
+      const res = await axios.post(ESP32_API_URL, { esp32_ip: esp32Ip }, { timeout: 30000 });
+      setResult(res.data);
+      // Show the combined visualization as the preview
+      if (res.data?.visualizations?.combined) {
+        setPreview(res.data.visualizations.combined);
+      }
+    } catch (err) {
+      setError(
+        err?.response?.data?.error ||
+          err.message ||
+          "ESP32 capture failed. Make sure ESP32-CAM is connected to the same WiFi."
+      );
+    } finally {
+      setEsp32Loading(false);
     }
   }
 
@@ -450,6 +477,46 @@ export default function DiseasePredictor() {
                   ↺ Reset
                 </button>
               )}
+            </div>
+
+            {/* ── ESP32-CAM section ── */}
+            <div className="mt-4 pt-4 border-t border-gray-100">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-base">📷</span>
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">ESP32-CAM Live Capture</p>
+              </div>
+              <div className="flex gap-2 mb-2">
+                <input
+                  type="text"
+                  value={esp32Ip}
+                  onChange={(e) => setEsp32Ip(e.target.value)}
+                  placeholder="172.20.10.2"
+                  className="flex-1 text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-300 font-mono"
+                />
+                <a
+                  href={`http://${esp32Ip}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="px-3 py-2 text-xs rounded-lg border border-blue-200 text-blue-600 hover:bg-blue-50 font-medium whitespace-nowrap"
+                >
+                  🔴 Live
+                </a>
+              </div>
+              <button
+                onClick={captureFromESP32}
+                disabled={esp32Loading || loading}
+                className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl font-semibold text-sm transition-all
+                  ${ esp32Loading || loading
+                    ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                    : "bg-blue-600 hover:bg-blue-700 text-white shadow-md"}`}
+              >
+                {esp32Loading ? (
+                  <><svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                  </svg>Capturing...</>
+                ) : <>📸 Capture &amp; Analyze from ESP32-CAM</>}
+              </button>
             </div>
           </div>
 
