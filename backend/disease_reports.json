@@ -38,5 +38,25 @@
     "note": "severe 34 perch field",
     "date": "2026-03-08",
     "created_at": "2026-03-08T23:34:20.425715"
+  },
+  {
+    "id": "9cbebe8b-e19f-4a75-afcc-d1fc40b698d5",
+    "lat": 8.439771599521741,
+    "lng": 80.32104492187501,
+    "disease": "Healthy",
+    "severity": "Low",
+    "note": "overall good",
+    "date": "2026-03-08",
+    "created_at": "2026-03-09T01:40:42.127380"
+  },
+  {
+    "id": "380b4706-a553-4f27-87f8-314002c6363e",
+    "lat": 6.402648405963896,
+    "lng": 81.62841796875001,
+    "disease": "Healthy",
+    "severity": "High",
+    "note": "",
+    "date": "2026-03-08",
+    "created_at": "2026-03-09T02:08:37.696534"
   }
 ]
