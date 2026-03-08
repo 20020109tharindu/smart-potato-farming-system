@@ -1,18 +1,26 @@
-// Firebase initialization (replace values with your Firebase project config)
+// Firebase initialization
+// Credentials are loaded from .env file ONLY (never hardcoded here)
+// Copy .env.example to .env and fill in your own Firebase project values
 import { initializeApp } from 'firebase/app'
 import { getAuth } from 'firebase/auth'
+import { getDatabase } from 'firebase/database'
 
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyBhqNacZ7FXLkbeR8Kn6TrVoHrQx6yMXfQ",
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "authentication-daf0d.firebaseapp.com",
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "authentication-daf0d",
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "authentication-daf0d.firebasestorage.app",
-  messagingSenderId:
-    import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "811689800378",
-  appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:811689800378:web:7b987e7aa6c390db57c883",
+  apiKey:            import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain:        import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  databaseURL:       import.meta.env.VITE_FIREBASE_DATABASE_URL,
+  projectId:         import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket:     import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId:             import.meta.env.VITE_FIREBASE_APP_ID,
 }
 
 const app = initializeApp(firebaseConfig)
+
+// Auth - for user login/signup
 export const auth = getAuth(app)
+
+// Realtime Database - for IoT sensor data (soil monitoring)
+export const realtimeDb = getDatabase(app)
 
 export default app
