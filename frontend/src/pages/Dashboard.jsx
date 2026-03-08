@@ -1,447 +1,779 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
+const Icon = ({
+  d,
+  size = 16,
+  stroke = "currentColor",
+  fill = "none",
+  sw = 1.8,
+}) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox='0 0 24 24'
+    fill={fill}
+    stroke={stroke}
+    strokeWidth={sw}
+    strokeLinecap='round'
+    strokeLinejoin='round'
+  >
+    {Array.isArray(d) ? (
+      d.map((p, i) => <path key={i} d={p} />)
+    ) : (
+      <path d={d} />
+    )}
+  </svg>
+);
+
+const LeafIcon = ({ size = 20 }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox='0 0 24 24'
+    fill='none'
+    stroke='currentColor'
+    strokeWidth='1.8'
+    strokeLinecap='round'
+    strokeLinejoin='round'
+  >
+    <path d='M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10z' />
+    <path d='M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12' />
+  </svg>
+);
+
+const CSS = `
+  @import url('https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --leaf:      #3d7a3a;
+    --leaf-mid:  #5a9e56;
+    --leaf-lt:   #7dc478;
+    --sprout:    #a8d5a2;
+    --fog:       #eef4ed;
+    --cream:     #f8f4ec;
+    --straw:     #e3d9c2;
+    --soil:      #7a5c3a;
+    --ink:       #1e2d1e;
+    --ink-mid:   #3b4f3a;
+    --ink-lt:    #6b8069;
+    --white:     #ffffff;
+    --amber:     #d48806;
+    --amber-bg:  #fffbf0;
+    --blue:      #2563b0;
+    --blue-bg:   #eff6ff;
+    --shadow-sm: 0 1px 3px rgba(30,45,30,0.08);
+    --shadow-md: 0 4px 16px rgba(30,45,30,0.10);
+    --shadow-lg: 0 16px 48px rgba(30,45,30,0.13), 0 2px 8px rgba(30,45,30,0.08);
+  }
+
+  .db-page {
+    min-height: 100vh;
+    background: var(--cream);
+    background-image:
+      radial-gradient(ellipse 70% 55% at 8% 0%,   rgba(90,158,86,0.10) 0%, transparent 55%),
+      radial-gradient(ellipse 55% 45% at 92% 100%, rgba(122,92,58,0.08) 0%, transparent 55%);
+    font-family: 'Inter', sans-serif;
+    position: relative;
+  }
+
+  .db-page::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image: radial-gradient(circle, rgba(90,158,86,0.09) 1px, transparent 1px);
+    background-size: 26px 26px;
+    pointer-events: none; z-index: 0;
+  }
+
+  /* ── Top hero banner ── */
+  .db-hero {
+    background: linear-gradient(108deg, #1a3018 0%, #2d5a2a 35%, #3d7a3a 65%, #5a9e56 100%);
+    padding: 36px 0 80px;
+    position: relative; overflow: hidden;
+  }
+
+  .db-hero::after {
+    content: '';
+    position: absolute; right: -60px; bottom: -80px;
+    width: 320px; height: 320px; border-radius: 50%;
+    background: rgba(255,255,255,.04);
+  }
+
+  .db-hero::before {
+    content: '';
+    position: absolute; right: 200px; top: -60px;
+    width: 180px; height: 180px; border-radius: 50%;
+    background: rgba(255,255,255,.03);
+  }
+
+  .db-hero-inner {
+    max-width: 1100px; margin: 0 auto; padding: 0 32px;
+    display: flex; align-items: center; justify-content: space-between; gap: 24px;
+    position: relative; z-index: 1;
+  }
+
+  .db-hero-left { display: flex; align-items: center; gap: 18px; }
+
+  .db-logo-box {
+    width: 60px; height: 60px; border-radius: 16px; flex-shrink: 0;
+    background: rgba(255,255,255,.13); border: 1px solid rgba(255,255,255,.2);
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-size: 28px;
+  }
+
+  .db-hero-eyebrow {
+    font-size: 10px; font-weight: 600; letter-spacing: .18em;
+    text-transform: uppercase; color: var(--sprout); margin-bottom: 5px;
+  }
+
+  .db-hero-title {
+    font-family: 'Lora', serif; font-size: 28px; font-weight: 700;
+    color: #fff; letter-spacing: -.01em; line-height: 1.2;
+  }
+
+  .db-hero-sub {
+    font-size: 13px; color: rgba(255,255,255,.55); margin-top: 4px; font-weight: 300;
+  }
+
+  .db-hero-right {
+    display: flex; align-items: center; gap: 16px; flex-shrink: 0;
+  }
+
+  .db-hero-welcome {
+    text-align: right;
+  }
+
+  .db-hero-welcome-label { font-size: 11px; color: rgba(255,255,255,.5); }
+
+  .db-hero-welcome-name {
+    font-family: 'Lora', serif; font-size: 18px; font-weight: 600; color: #fff;
+  }
+
+  .db-avatar {
+    width: 48px; height: 48px; border-radius: 50%;
+    background: rgba(255,255,255,.15); border: 2px solid rgba(255,255,255,.3);
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Lora', serif; font-size: 18px; font-weight: 700; color: #fff;
+  }
+
+  /* ── Main content ── */
+  .db-main {
+    max-width: 1100px; margin: 0 auto; padding: 0 32px 64px;
+    position: relative; z-index: 1;
+    margin-top: -48px;
+  }
+
+  /* ── Stat cards (pulled up over hero) ── */
+  .db-stats {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 20px; margin-bottom: 32px;
+  }
+
+  .db-stat-card {
+    background: var(--white);
+    border: 1px solid rgba(122,92,58,.1);
+    border-radius: 16px; padding: 22px 24px;
+    box-shadow: var(--shadow-md);
+    display: flex; align-items: center; gap: 16px;
+    animation: cardIn .5s ease both;
+    transition: transform .2s ease, box-shadow .2s ease;
+  }
+
+  .db-stat-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); }
+
+  .db-stat-card:nth-child(1) { animation-delay: .05s; }
+  .db-stat-card:nth-child(2) { animation-delay: .10s; }
+  .db-stat-card:nth-child(3) { animation-delay: .15s; }
+
+  .db-stat-icon {
+    width: 48px; height: 48px; border-radius: 13px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center; font-size: 22px;
+    border: 1px solid;
+  }
+
+  .db-stat-icon.green  { background: var(--fog);   border-color: rgba(61,122,58,.2); }
+  .db-stat-icon.amber  { background: var(--amber-bg); border-color: rgba(212,136,6,.2); }
+  .db-stat-icon.blue   { background: var(--blue-bg);  border-color: rgba(37,99,176,.2); }
+
+  .db-stat-value {
+    font-family: 'Lora', serif; font-size: 28px; font-weight: 700;
+    color: var(--ink); line-height: 1;
+  }
+
+  .db-stat-label { font-size: 12px; color: var(--ink-lt); margin-top: 4px; }
+
+  /* ── Section heading ── */
+  .db-sec-head {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 20px;
+  }
+
+  .db-sec-icon {
+    width: 32px; height: 32px; border-radius: 9px;
+    background: var(--fog); border: 1px solid rgba(61,122,58,.18);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--leaf); flex-shrink: 0;
+  }
+
+  .db-sec-title {
+    font-family: 'Lora', serif; font-size: 17px; font-weight: 700;
+    color: var(--ink); letter-spacing: -.005em;
+  }
+
+  .db-sec-line { flex: 1; height: 1px; background: var(--straw); }
+
+  /* ── Quick Action cards ── */
+  .db-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 32px; }
+
+  .db-action-card {
+    background: var(--white);
+    border: 1px solid rgba(122,92,58,.1);
+    border-radius: 18px; overflow: hidden;
+    box-shadow: var(--shadow-sm);
+    cursor: pointer;
+    transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+    animation: cardIn .5s ease both;
+    position: relative;
+  }
+
+  .db-action-card:nth-child(1) { animation-delay: .1s; }
+  .db-action-card:nth-child(2) { animation-delay: .15s; }
+  .db-action-card:nth-child(3) { animation-delay: .2s; }
+
+  .db-action-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-lg); border-color: rgba(61,122,58,.22); }
+
+  .db-action-banner {
+    padding: 26px 24px 22px; position: relative; overflow: hidden;
+  }
+
+  .db-action-banner::after {
+    content: ''; position: absolute; right: -16px; top: -16px;
+    width: 100px; height: 100px; border-radius: 50%;
+    background: rgba(255,255,255,.08);
+  }
+
+  .db-action-emoji { font-size: 36px; display: block; margin-bottom: 12px; position: relative; z-index: 1; }
+
+  .db-action-title {
+    font-family: 'Lora', serif; font-size: 18px; font-weight: 700;
+    color: #fff; line-height: 1.2; margin-bottom: 5px;
+    position: relative; z-index: 1;
+  }
+
+  .db-action-desc {
+    font-size: 12.5px; color: rgba(255,255,255,.65); line-height: 1.5;
+    position: relative; z-index: 1;
+  }
+
+  .db-action-banner.green  { background: linear-gradient(135deg, #253f23 0%, #3d7a3a 55%, #5a9e56 100%); }
+  .db-action-banner.amber  { background: linear-gradient(135deg, #6b3a0a 0%, #9a5c1a 55%, #d48806 100%); }
+  .db-action-banner.blue   { background: linear-gradient(135deg, #0f2a5c 0%, #1e4a9a 55%, #2563b0 100%); }
+
+  .db-action-foot {
+    padding: 16px 20px; background: var(--cream);
+    border-top: 1px solid rgba(122,92,58,.08);
+  }
+
+  .db-action-btn {
+    width: 100%; padding: 11px 16px;
+    background: var(--white); border: 1.5px solid rgba(61,122,58,.22);
+    border-radius: 10px; cursor: pointer;
+    font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 600;
+    color: var(--leaf); letter-spacing: .03em;
+    display: flex; align-items: center; justify-content: center; gap: 7px;
+    transition: all .18s ease;
+  }
+
+  .db-action-btn:hover { background: var(--fog); border-color: var(--leaf-mid); transform: none; }
+
+  .db-action-banner.amber + .db-action-foot .db-action-btn { color: var(--amber); border-color: rgba(212,136,6,.3); }
+  .db-action-banner.amber + .db-action-foot .db-action-btn:hover { background: var(--amber-bg); border-color: var(--amber); }
+
+  .db-action-banner.blue + .db-action-foot .db-action-btn { color: var(--blue); border-color: rgba(37,99,176,.25); }
+  .db-action-banner.blue + .db-action-foot .db-action-btn:hover { background: var(--blue-bg); border-color: var(--blue); }
+
+  .db-popular-badge {
+    position: absolute; top: 12px; right: 12px;
+    background: rgba(255,255,255,.2); border: 1px solid rgba(255,255,255,.3);
+    border-radius: 20px; padding: 3px 10px;
+    font-size: 10px; font-weight: 600; color: #fff; letter-spacing: .06em;
+    text-transform: uppercase; z-index: 2;
+  }
+
+  /* ── Two column row ── */
+  .db-row { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; margin-bottom: 32px; }
+
+  /* ── Activity card ── */
+  .db-activity-card {
+    background: var(--white);
+    border: 1px solid rgba(122,92,58,.1);
+    border-radius: 18px; padding: 28px;
+    box-shadow: var(--shadow-sm);
+    animation: cardIn .5s ease both .15s;
+  }
+
+  .db-activity-list { display: flex; flex-direction: column; gap: 4px; }
+
+  .db-activity-item {
+    display: flex; align-items: center; gap: 14px;
+    padding: 14px 12px; border-radius: 12px;
+    cursor: pointer;
+    transition: background .15s ease;
+  }
+
+  .db-activity-item:hover { background: var(--cream); }
+
+  .db-activity-icon {
+    width: 42px; height: 42px; border-radius: 12px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center; font-size: 19px;
+    border: 1px solid;
+  }
+
+  .db-activity-icon.g { background: var(--fog);      border-color: rgba(61,122,58,.2); }
+  .db-activity-icon.b { background: var(--blue-bg);  border-color: rgba(37,99,176,.2); }
+  .db-activity-icon.a { background: var(--amber-bg); border-color: rgba(212,136,6,.18); }
+
+  .db-activity-main { flex: 1; }
+
+  .db-activity-action { font-size: 13.5px; font-weight: 600; color: var(--ink); margin-bottom: 2px; }
+  .db-activity-detail { font-size: 12px; color: var(--ink-lt); }
+  .db-activity-time   { font-size: 11px; color: var(--ink-lt); opacity: .55; white-space: nowrap; }
+
+  .db-activity-divider { border: none; border-top: 1px solid var(--straw); margin: 8px 0; }
+
+  .db-view-all {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 13px; font-weight: 500; color: var(--leaf);
+    background: none; border: none; cursor: pointer;
+    padding: 8px 0; transition: gap .15s ease;
+  }
+
+  .db-view-all:hover { gap: 10px; }
+
+  /* ── Performance card ── */
+  .db-perf-card {
+    background: linear-gradient(145deg, #1a3018 0%, #2d5a2a 50%, #3d7a3a 100%);
+    border-radius: 18px; padding: 28px;
+    box-shadow: var(--shadow-md);
+    animation: cardIn .5s ease both .2s;
+    display: flex; flex-direction: column;
+  }
+
+  .db-perf-header {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 22px;
+  }
+
+  .db-perf-icon {
+    width: 34px; height: 34px; border-radius: 9px;
+    background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.15);
+    display: flex; align-items: center; justify-content: center; color: #fff;
+  }
+
+  .db-perf-title {
+    font-family: 'Lora', serif; font-size: 16px; font-weight: 700; color: #fff;
+  }
+
+  .db-perf-metrics { display: flex; flex-direction: column; gap: 14px; flex: 1; }
+
+  .db-perf-item {
+    background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.1);
+    border-radius: 12px; padding: 14px 16px;
+  }
+
+  .db-perf-row {
+    display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;
+  }
+
+  .db-perf-label { font-size: 11.5px; color: rgba(255,255,255,.6); }
+
+  .db-perf-value {
+    font-family: 'Lora', serif; font-size: 18px; font-weight: 700; color: var(--sprout);
+  }
+
+  .db-perf-track {
+    height: 5px; background: rgba(255,255,255,.12);
+    border-radius: 99px; overflow: hidden;
+  }
+
+  .db-perf-fill {
+    height: 100%; border-radius: 99px;
+    transition: width 1s cubic-bezier(.22,1,.36,1);
+  }
+
+  .db-perf-btn {
+    margin-top: 20px; width: 100%;
+    background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.18);
+    border-radius: 10px; padding: 12px;
+    font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 500;
+    color: rgba(255,255,255,.85); cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 7px;
+    transition: all .18s ease;
+  }
+
+  .db-perf-btn:hover { background: rgba(255,255,255,.16); color: #fff; }
+
+  /* ── Tips card ── */
+  .db-tips-card {
+    background: var(--amber-bg);
+    border: 1.5px solid rgba(212,136,6,.2);
+    border-radius: 18px; padding: 28px;
+    animation: cardIn .5s ease both .25s;
+  }
+
+  .db-tips-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 20px; }
+
+  .db-tip-item {
+    background: var(--white);
+    border: 1px solid rgba(212,136,6,.12);
+    border-radius: 14px; padding: 22px 18px;
+    transition: box-shadow .2s ease, transform .2s ease;
+  }
+
+  .db-tip-item:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
+
+  .db-tip-emoji { font-size: 28px; margin-bottom: 10px; }
+
+  .db-tip-title {
+    font-family: 'Lora', serif; font-size: 14px; font-weight: 600;
+    color: var(--ink); margin-bottom: 6px;
+  }
+
+  .db-tip-text { font-size: 12.5px; color: var(--ink-lt); line-height: 1.55; }
+
+  /* ── Footer ── */
+  .db-footer {
+    display: flex; align-items: center; justify-content: center; gap: 18px;
+    padding-bottom: 16px;
+    animation: fadeUp .5s ease both .3s;
+  }
+
+  .db-fi { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--ink-lt); opacity: .45; }
+  .db-fd { width: 3px; height: 3px; border-radius: 50%; background: var(--ink-lt); opacity: .3; }
+
+  @keyframes cardIn  { from { opacity:0; transform:translateY(14px); } to { opacity:1; transform:translateY(0); } }
+  @keyframes fadeUp  { from { opacity:0; transform:translateY(10px);  } to { opacity:1; transform:translateY(0); } }
+  @keyframes fadeDown{ from { opacity:0; transform:translateY(-10px); } to { opacity:1; transform:translateY(0); } }
+
+  @media (max-width: 900px) {
+    .db-stats   { grid-template-columns: 1fr 1fr; }
+    .db-actions { grid-template-columns: 1fr; }
+    .db-row     { grid-template-columns: 1fr; }
+    .db-tips-grid { grid-template-columns: 1fr; }
+    .db-hero-right { display: none; }
+  }
+
+  @media (max-width: 560px) {
+    .db-stats { grid-template-columns: 1fr; }
+    .db-hero-inner { flex-direction: column; align-items: flex-start; }
+    .db-main { padding: 0 18px 48px; }
+    .db-hero { padding: 28px 0 70px; }
+  }
+`;
+
 export default function Dashboard() {
   const navigate = useNavigate();
-  const [hoveredCard, setHoveredCard] = useState(null);
-
-
-const cards = [
-  {
-    title: "Start New Input",
-    desc: "Enter field details, costs and constraints to get predictions.",
-    to: "/app/cost/in",
-    cta: "Go to Input Page",
-    icon: "📝",
-    color: "from-green-500 to-emerald-600",
-    bgColor: "bg-green-50",
-    borderColor: "border-green-200",
-  },
-  {
-    title: "View Results",
-    desc: "Check predicted yield, revenue and key metrics.",
-    to: "/app/cost/results",
-    cta: "Open Results",
-    icon: "📊",
-    color: "from-blue-500 to-indigo-600",
-    bgColor: "bg-blue-50",
-    borderColor: "border-blue-200",
-  },
-  {
-    title: "Recommendations",
-    desc: "See actionable fertilizer, irrigation and variety tips.",
-    to: "/app/cost/recommendations",
-    cta: "See Recommendations",
-    icon: "💡",
-    color: "from-purple-500 to-pink-600",
-    bgColor: "bg-purple-50",
-    borderColor: "border-purple-200",
-  },
-];
 
   const quickStats = [
+    { icon: "📁", label: "Datasets", value: "3", cls: "green" },
+    { icon: "🌾", label: "Avg. Predicted Yield", value: "18.7t", cls: "amber" },
+    { icon: "🔄", label: "Scenarios Run", value: "12", cls: "blue" },
+  ];
+
+  const actions = [
     {
-      label: "Datasets",
-      value: 3,
-      icon: "📁",
-      color: "text-blue-600",
-      bgColor: "bg-blue-50",
+      emoji: "📝",
+      banner: "green",
+      badge: "Popular",
+      title: "Start New Input",
+      desc: "Enter field details, costs and constraints to generate predictions.",
+      cta: "Go to Input Page",
+      to: "/app/cost/in",
     },
     {
-      label: "Scenarios Run",
-      value: 12,
-      icon: "🔄",
-      color: "text-green-600",
-      bgColor: "bg-green-50",
+      emoji: "📊",
+      banner: "amber",
+      title: "View Results",
+      desc: "Check predicted yield, revenue and key metrics from your last run.",
+      cta: "Open Results",
+      to: "/app/cost/results",
     },
     {
-      label: "Avg. Predicted Yield (t/ha)",
-      value: 18.7,
-      icon: "🌾",
-      color: "text-amber-600",
-      bgColor: "bg-amber-50",
+      emoji: "💡",
+      banner: "blue",
+      title: "Recommendations",
+      desc: "See actionable investment strategies with weekly action plans.",
+      cta: "See Recommendations",
+      to: "/app/cost/recommendations",
     },
   ];
 
-  const recentActivities = [
+  const activity = [
     {
-      action: 'Ran prediction for "Yala-Field-A"',
-      details: "Soil: Loam, Budget: LKR 120k",
-      time: "2 hours ago",
       icon: "🚜",
-      color: "bg-green-100 text-green-700",
+      cls: "g",
+      action: 'Ran prediction for "Yala-Field-A"',
+      detail: "Soil: Loam · Budget: LKR 120k",
+      time: "2 hrs ago",
     },
     {
-      action: "Updated fertilizer cost assumptions",
-      details: "New rate: LKR 85/kg",
-      time: "5 hours ago",
       icon: "💰",
-      color: "bg-blue-100 text-blue-700",
+      cls: "b",
+      action: "Updated fertilizer cost assumptions",
+      detail: "New rate: LKR 85/kg",
+      time: "5 hrs ago",
     },
-    {
-      action: 'Exported PDF report for "Maha-Scenario-03"',
-      details: "3.2 MB file downloaded",
-      time: "1 day ago",
-      icon: "📄",
-      color: "bg-purple-100 text-purple-700",
-    },
+    
+     
   ];
 
-  const handleNavigate = (path) => {
-  navigate(path);
-};
+  const perfMetrics = [
+    { label: "Model Accuracy", value: "94%", pct: 94, color: "#7dc478" },
+    {
+      label: "Avg. Profit Margin",
+      value: "32%",
+      pct: 32,
+      color: "var(--sprout)",
+    },
+    { label: "Cost Efficiency", value: "87%", pct: 87, color: "#a8d5a2" },
+  ];
+
+  const tips = [
+    {
+      emoji: "🌱",
+      title: "Seed Readiness",
+      text: "Update soil test results every season for accurate yield predictions.",
+    },
+    {
+      emoji: "🌤️",
+      title: "Soil Health",
+      text: "Track forecasts to optimize fertilizer application timing.",
+    },
+    {
+      emoji: "📊",
+      title: "Disease Predictor",
+      text: "Compare multiple scenarios before making final planting decisions.",
+    },
+  ];
 
   return (
-    <div className='min-h-screen bg-gradient-to-br from-green-50 via-blue-50 to-purple-50'>
-      {/* Header Section with Wave Pattern */}
-      <div className='relative bg-gradient-to-r from-green-600 via-blue-600 to-purple-600 overflow-hidden'>
-        <div className='absolute inset-0 opacity-10'>
-          <svg
-            className='w-full h-full'
-            viewBox='0 0 1440 320'
-            preserveAspectRatio='none'
-          >
-            <path
-              fill='#ffffff'
-              d='M0,96L48,112C96,128,192,160,288,160C384,160,480,128,576,112C672,96,768,96,864,112C960,128,1056,160,1152,165.3C1248,171,1344,149,1392,138.7L1440,128L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z'
-            ></path>
-          </svg>
+    <>
+      <style>{CSS}</style>
+      <div className='db-page'>
+        {/* ── Hero ── */}
+        <div className='db-hero'>
+          <div className='db-hero-inner'>
+            <div className='db-hero-left'>
+              <div className='db-logo-box'>
+                <LeafIcon size={28} />
+              </div>
+              <div>
+                <div className='db-hero-eyebrow'>
+                  AgriIntelligence · Sri Lanka
+                </div>
+                <div className='db-hero-title'>Potato Farm Analytics</div>
+                <div className='db-hero-sub'>
+                  Smart farming decisions powered by ML
+                </div>
+              </div>
+            </div>
+            <div className='db-hero-right'>
+              <div className='db-hero-welcome'>
+                <div className='db-hero-welcome-label'>Welcome back,</div>
+                <div className='db-hero-welcome-name'>Farmer</div>
+              </div>
+              <div className='db-avatar'>F</div>
+            </div>
+          </div>
         </div>
 
-        <div className='relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12'>
-          <div className='flex items-center justify-between flex-wrap gap-6'>
-            <div className='flex-1'>
-              <div className='flex items-center mb-3'>
-                <div className='w-16 h-16 bg-white rounded-2xl shadow-lg flex items-center justify-center text-4xl mr-4'>
-                  🥔
-                </div>
+        {/* ── Main content ── */}
+        <div className='db-main'>
+          {/* Stat chips */}
+          <div className='db-stats'>
+            {quickStats.map((s, i) => (
+              <div className='db-stat-card' key={i}>
+                <div className={`db-stat-icon ${s.cls}`}>{s.icon}</div>
                 <div>
-                  <h1 className='text-3xl md:text-4xl font-bold text-white mb-1'>
-                    Potato Farm Analytics
-                  </h1>
-                  <p className='text-white/90 text-sm md:text-base'>
-                    Smart farming decisions powered by data
-                  </p>
+                  <div className='db-stat-value'>{s.value}</div>
+                  <div className='db-stat-label'>{s.label}</div>
                 </div>
-              </div>
-            </div>
-
-            <div className='hidden md:flex items-center space-x-4'>
-              <div className='text-right'>
-                <p className='text-white/80 text-sm'>Welcome back,</p>
-                <p className='text-white text-lg font-semibold'>Farmer</p>
-              </div>
-              <div className='w-14 h-14 bg-white rounded-full flex items-center justify-center shadow-lg'>
-                <span className='text-2xl font-bold bg-gradient-to-br from-green-600 to-blue-600 bg-clip-text text-transparent'>
-                  F
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-8'>
-        {/* Quick Stats with Enhanced Design */}
-        <div className='grid grid-cols-1 md:grid-cols-3 gap-6 mb-10'>
-          {quickStats.map((stat, idx) => (
-            <div
-              key={idx}
-              className='bg-white rounded-2xl shadow-xl p-6 border-l-4 border-transparent hover:border-blue-500 transform transition hover:scale-105 hover:shadow-2xl'
-            >
-              <div className='flex items-center justify-between mb-4'>
-                <div className={`${stat.bgColor} p-4 rounded-xl`}>
-                  <span className='text-4xl'>{stat.icon}</span>
-                </div>
-                <div className={`text-5xl font-bold ${stat.color}`}>
-                  {stat.value}
-                </div>
-              </div>
-              <p className='text-gray-700 font-semibold text-lg'>
-                {stat.label}
-              </p>
-            </div>
-          ))}
-        </div>
-
-        {/* Quick Actions with Premium Design */}
-        <div className='mb-10'>
-          <div className='flex items-center justify-between mb-6'>
-            <h2 className='text-3xl font-bold text-gray-800 flex items-center'>
-              <span className='bg-gradient-to-br from-blue-500 to-purple-500 p-3 rounded-xl mr-3 text-white'>
-                🎯
-              </span>
-              Quick Actions
-            </h2>
-            <span className='text-sm text-gray-500 hidden md:block'>
-              Choose an action to get started
-            </span>
-          </div>
-
-          <div className='grid grid-cols-1 md:grid-cols-3 gap-6'>
-            {cards.map((card, i) => (
-              <div
-                key={i}
-                className={`group bg-white rounded-3xl shadow-xl overflow-hidden border-2 ${card.borderColor} transform transition hover:scale-105 hover:shadow-2xl cursor-pointer relative`}
-                onMouseEnter={() => setHoveredCard(i)}
-                onMouseLeave={() => setHoveredCard(null)}
-                onClick={() => handleNavigate(card.to)}
-              >
-                {/* Decorative gradient overlay */}
-                <div
-                  className={`absolute inset-0 bg-gradient-to-br ${card.color} opacity-0 group-hover:opacity-5 transition-opacity duration-300`}
-                ></div>
-
-                {/* Card Header */}
-                <div className={`relative p-8 bg-gradient-to-br ${card.color}`}>
-                  <div className='absolute top-4 right-4 opacity-20'>
-                    <div className='text-7xl'>{card.icon}</div>
-                  </div>
-                  <div className='relative z-10'>
-                    <div className='text-6xl mb-4'>{card.icon}</div>
-                    <h3 className='text-2xl font-bold text-white mb-2'>
-                      {card.title}
-                    </h3>
-                    <p className='text-white/90 text-sm leading-relaxed'>
-                      {card.desc}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Card Footer */}
-                <div className={`p-6 ${card.bgColor} relative z-10`}>
-                  <button
-                    className={`w-full py-4 px-6 rounded-xl font-semibold transition transform ${
-                      hoveredCard === i
-                        ? "bg-white shadow-xl scale-105"
-                        : "bg-white/80"
-                    } text-gray-800 flex items-center justify-center group-hover:shadow-lg`}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleNavigate(card.to);
-                    }}
-                  >
-                    <span>{card.cta}</span>
-                    <svg
-                      className='w-5 h-5 ml-2 transform group-hover:translate-x-1 transition-transform'
-                      fill='none'
-                      stroke='currentColor'
-                      viewBox='0 0 24 24'
-                    >
-                      <path
-                        strokeLinecap='round'
-                        strokeLinejoin='round'
-                        strokeWidth={2}
-                        d='M13 7l5 5m0 0l-5 5m5-5H6'
-                      />
-                    </svg>
-                  </button>
-                </div>
-
-                {/* Badge */}
-                {i === 0 && (
-                  <div className='absolute top-4 right-4 bg-yellow-400 text-yellow-900 text-xs font-bold px-3 py-1 rounded-full shadow-lg'>
-                    Popular
-                  </div>
-                )}
               </div>
             ))}
           </div>
-        </div>
 
-        {/* Two Column Layout */}
-        <div className='grid grid-cols-1 lg:grid-cols-3 gap-6 mb-10'>
-          {/* Recent Activity - Takes 2 columns */}
-          <div className='lg:col-span-2 bg-white rounded-3xl shadow-xl p-8 border border-gray-100'>
-            <h2 className='text-2xl font-bold text-gray-800 mb-6 flex items-center'>
-              <span className='bg-gradient-to-br from-green-500 to-blue-500 p-2 rounded-lg mr-3 text-white'>
-                📈
-              </span>
-              Recent Activity
-            </h2>
-            <div className='space-y-4'>
-              {recentActivities.map((activity, idx) => (
-                <div
-                  key={idx}
-                  className='flex items-start p-5 rounded-2xl hover:bg-gray-50 transition border border-transparent hover:border-gray-200 group cursor-pointer'
-                >
-                  <div
-                    className={`${activity.color} rounded-2xl p-4 mr-4 text-2xl transform group-hover:scale-110 transition-transform`}
+          {/* Quick Actions */}
+          <div className='db-sec-head'>
+            <div className='db-sec-icon'>
+              <Icon d='M13 10V3L4 14h7v7l9-11h-7z' size={15} />
+            </div>
+            <span className='db-sec-title'>Quick Actions</span>
+            <div className='db-sec-line' />
+          </div>
+
+          <div className='db-actions'>
+            {actions.map((a, i) => (
+              <div
+                className='db-action-card'
+                key={i}
+                onClick={() => navigate(a.to)}
+              >
+                {a.badge && <span className='db-popular-badge'>{a.badge}</span>}
+                <div className={`db-action-banner ${a.banner}`}>
+                  <span className='db-action-emoji'>{a.emoji}</span>
+                  <div className='db-action-title'>{a.title}</div>
+                  <div className='db-action-desc'>{a.desc}</div>
+                </div>
+                <div className='db-action-foot'>
+                  <button
+                    className='db-action-btn'
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigate(a.to);
+                    }}
                   >
-                    {activity.icon}
-                  </div>
-                  <div className='flex-1'>
-                    <p className='font-bold text-gray-800 text-base mb-1'>
-                      {activity.action}
-                    </p>
-                    <p className='text-sm text-gray-600 mb-2'>
-                      {activity.details}
-                    </p>
-                    <p className='text-xs text-gray-500 flex items-center'>
-                      <svg
-                        className='w-3 h-3 mr-1'
-                        fill='currentColor'
-                        viewBox='0 0 20 20'
-                      >
-                        <path
-                          fillRule='evenodd'
-                          d='M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z'
-                          clipRule='evenodd'
-                        />
-                      </svg>
-                      {activity.time}
-                    </p>
-                  </div>
-                  <button className='text-gray-400 hover:text-blue-600 transition opacity-0 group-hover:opacity-100'>
-                    <svg
-                      className='w-6 h-6'
-                      fill='none'
-                      stroke='currentColor'
-                      viewBox='0 0 24 24'
-                    >
-                      <path
-                        strokeLinecap='round'
-                        strokeLinejoin='round'
-                        strokeWidth={2}
-                        d='M9 5l7 7-7 7'
-                      />
-                    </svg>
+                    {a.cta}
+                    <Icon d='M13 7l5 5m0 0l-5 5m5-5H6' size={13} sw={2} />
                   </button>
                 </div>
-              ))}
+              </div>
+            ))}
+          </div>
+
+          {/* Activity + Performance */}
+          <div className='db-row'>
+            {/* Activity */}
+            <div className='db-activity-card'>
+              <div className='db-sec-head' style={{ marginBottom: 18 }}>
+                <div className='db-sec-icon'>
+                  <Icon d='M22 12h-4l-3 9L9 3l-3 9H2' size={15} />
+                </div>
+                <span className='db-sec-title'>Recent Activity</span>
+                <div className='db-sec-line' />
+              </div>
+
+              <div className='db-activity-list'>
+                {activity.map((a, i) => (
+                  <div key={i}>
+                    <div className='db-activity-item'>
+                      <div className={`db-activity-icon ${a.cls}`}>
+                        {a.icon}
+                      </div>
+                      <div className='db-activity-main'>
+                        <div className='db-activity-action'>{a.action}</div>
+                        <div className='db-activity-detail'>{a.detail}</div>
+                      </div>
+                      <div className='db-activity-time'>{a.time}</div>
+                    </div>
+                    {i < activity.length - 1 && (
+                      <hr className='db-activity-divider' />
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              <div
+                style={{
+                  marginTop: 16,
+                  paddingTop: 14,
+                  borderTop: "1px solid var(--straw)",
+                }}
+              >
+                <button className='db-view-all'>
+                  View all activity
+                  <Icon d='M13 7l5 5m0 0l-5 5m5-5H6' size={14} sw={2} />
+                </button>
+              </div>
             </div>
 
-            <div className='mt-6 pt-6 border-t border-gray-200'>
-              <button className='text-blue-600 hover:text-blue-700 font-semibold flex items-center transition group'>
-                <span>View all activity</span>
-                <svg
-                  className='w-5 h-5 ml-2 transform group-hover:translate-x-1 transition-transform'
-                  fill='none'
-                  stroke='currentColor'
-                  viewBox='0 0 24 24'
-                >
-                  <path
-                    strokeLinecap='round'
-                    strokeLinejoin='round'
-                    strokeWidth={2}
-                    d='M13 7l5 5m0 0l-5 5m5-5H6'
+            {/* Performance */}
+            <div className='db-perf-card'>
+              <div className='db-perf-header'>
+                <div className='db-perf-icon'>
+                  <Icon
+                    d='M18 20V10M12 20V4M6 20v-6'
+                    size={16}
+                    stroke='#fff'
+                    sw={2}
                   />
-                </svg>
+                </div>
+                <span className='db-perf-title'>Performance Insights</span>
+              </div>
+
+              <div className='db-perf-metrics'>
+                {perfMetrics.map((m, i) => (
+                  <div className='db-perf-item' key={i}>
+                    <div className='db-perf-row'>
+                      <span className='db-perf-label'>{m.label}</span>
+                      <span className='db-perf-value'>{m.value}</span>
+                    </div>
+                    <div className='db-perf-track'>
+                      <div
+                        className='db-perf-fill'
+                        style={{ width: `${m.pct}%`, background: m.color }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <button className='db-perf-btn'>
+                View Detailed Analytics
+                <Icon
+                  d='M13 7l5 5m0 0l-5 5m5-5H6'
+                  size={13}
+                  stroke='rgba(255,255,255,.7)'
+                  sw={2}
+                />
               </button>
             </div>
           </div>
 
-          {/* System Status - Takes 1 column */}
-          <div className='bg-gradient-to-br from-green-50 to-emerald-50 rounded-3xl shadow-xl p-8 border-2 border-green-200'>
-            <div className='flex items-center mb-6'>
-              <span className='text-4xl mr-3'>⚙️</span>
-              <h3 className='text-2xl font-bold text-gray-800'>
-                System Status
-              </h3>
+          {/* Tips */}
+          <div className='db-tips-card'>
+            <div className='db-sec-head' style={{ marginBottom: 0 }}>
+              <div
+                className='db-sec-icon'
+                style={{
+                  background: "rgba(212,136,6,.1)",
+                  borderColor: "rgba(212,136,6,.2)",
+                  color: "var(--amber)",
+                }}
+              >
+                <Icon
+                  d='M12 2l.642 2.08A6 6 0 0 0 15 5.876L17.08 5.236A6 6 0 0 1 18 9.196l-2.08.642A6 6 0 0 0 14.124 12L14.764 14.08A6 6 0 0 1 10.804 15l-.642-2.08A6 6 0 0 0 8 11.124L5.92 11.764A6 6 0 0 1 5 7.804l2.08-.642A6 6 0 0 0 8.876 5L8.236 2.92A6 6 0 0 1 12 2z'
+                  size={15}
+                />
+              </div>
+              <span className='db-sec-title' style={{ color: "#7a4a00" }}>
+                Farming Best Practices
+              </span>
+              <div
+                className='db-sec-line'
+                style={{ background: "rgba(212,136,6,.2)" }}
+              />
             </div>
-
-            <div className='space-y-4'>
-              <div className='bg-white rounded-2xl p-4 shadow-sm hover:shadow-md transition'>
-                <div className='flex justify-between items-center mb-2'>
-                  <span className='text-sm text-gray-600 font-medium'>
-                    Model Version
-                  </span>
-                  <span className='text-lg font-bold text-gray-800'>
-                    v2.3.1
-                  </span>
+            <div className='db-tips-grid'>
+              {tips.map((t, i) => (
+                <div className='db-tip-item' key={i}>
+                  <div className='db-tip-emoji'>{t.emoji}</div>
+                  <div className='db-tip-title'>{t.title}</div>
+                  <div className='db-tip-text'>{t.text}</div>
                 </div>
-                <div className='h-2 bg-gray-200 rounded-full overflow-hidden'>
-                  <div className='h-full bg-gradient-to-r from-green-400 to-blue-500 w-full'></div>
-                </div>
-              </div>
-
-              <div className='bg-white rounded-2xl p-4 shadow-sm hover:shadow-md transition'>
-                <div className='flex justify-between items-center'>
-                  <span className='text-sm text-gray-600 font-medium'>
-                    Last Updated
-                  </span>
-                  <span className='text-sm font-semibold text-gray-800'>
-                    Nov 27, 2025
-                  </span>
-                </div>
-              </div>
-
-              <div className='bg-white rounded-2xl p-4 shadow-sm hover:shadow-md transition'>
-                <div className='flex justify-between items-center'>
-                  <span className='text-sm text-gray-600 font-medium'>
-                    Status
-                  </span>
-                  <span className='flex items-center text-sm font-bold text-green-600'>
-                    <span className='relative flex h-3 w-3 mr-2'>
-                      <span className='animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75'></span>
-                      <span className='relative inline-flex rounded-full h-3 w-3 bg-green-500'></span>
-                    </span>
-                    Active
-                  </span>
-                </div>
-              </div>
-
-              <div className='bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl p-4 text-white mt-6'>
-                <p className='text-sm font-medium mb-2'>💡 Quick Tip</p>
-                <p className='text-xs leading-relaxed opacity-90'>
-                  Update soil test results every season for more accurate
-                  predictions.
-                </p>
-              </div>
+              ))}
             </div>
           </div>
-        </div>
 
-        {/* Tips Section - Full Width */}
-        <div className='bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50 rounded-3xl shadow-xl p-8 border-2 border-amber-200 mb-10'>
-          <div className='flex items-center mb-6'>
-            <span className='text-4xl mr-3'>💡</span>
-            <h3 className='text-2xl font-bold text-gray-800'>
-              Farming Best Practices
-            </h3>
-          </div>
-          <div className='grid grid-cols-1 md:grid-cols-3 gap-6'>
-            <div className='bg-white rounded-2xl p-6 shadow-sm hover:shadow-lg transition'>
-              <div className='text-3xl mb-3'>🌱</div>
-              <h4 className='font-bold text-gray-800 mb-2'>Soil Management</h4>
-              <p className='text-sm text-gray-600'>
-                Update soil test results every season for accurate yield
-                predictions
-              </p>
-            </div>
-            <div className='bg-white rounded-2xl p-6 shadow-sm hover:shadow-lg transition'>
-              <div className='text-3xl mb-3'>🌤️</div>
-              <h4 className='font-bold text-gray-800 mb-2'>
-                Weather Monitoring
-              </h4>
-              <p className='text-sm text-gray-600'>
-                Track forecasts to optimize fertilizer application timing
-              </p>
-            </div>
-            <div className='bg-white rounded-2xl p-6 shadow-sm hover:shadow-lg transition'>
-              <div className='text-3xl mb-3'>📊</div>
-              <h4 className='font-bold text-gray-800 mb-2'>
-                Scenario Planning
-              </h4>
-              <p className='text-sm text-gray-600'>
-                Compare multiple scenarios before making final planting
-                decisions
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Footer */}
-        <div className='text-center pb-8'>
-          <div className='inline-flex items-center bg-white rounded-full px-6 py-3 shadow-lg'>
-            <span className='text-2xl mr-3'>🌱</span>
-            <p className='text-gray-700 font-medium'>
-              Powered by Advanced Machine Learning | Built for Sri Lankan Potato
-              Farmers
-            </p>
+          {/* Footer */}
+          <div className='db-footer'>
+            <span className='db-fi'>🌍 Sri Lanka Agri Data</span>
+            <span className='db-fd' />
+            <span className='db-fi'>🔒 Secure Processing</span>
+            <span className='db-fd' />
+            <span className='db-fi'>📊 ML-Powered Insights</span>
           </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }
