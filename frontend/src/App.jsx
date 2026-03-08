@@ -7,7 +7,6 @@ import ResultsPage from "./pages/ResultsPage";
 import RecommendationPage from "./pages/RecommendationPage";
 import SeedReadinessPage from "./pages/SeedReadinessPage";
 import DiseasePredictor from "./pages/DiseasePredictor";
-
 import SignIn from "./pages/SignIn";
 import SignUp from "./pages/SignUp";
 import Landing from "./pages/Landing";
