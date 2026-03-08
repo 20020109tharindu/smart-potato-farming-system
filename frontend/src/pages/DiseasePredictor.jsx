@@ -368,6 +368,39 @@ export default function DiseasePredictor() {
   const [streamKey, setStreamKey] = useState(0);
   const inputRef = useRef(null);
 
+  /* ── AI Recommendation state ── */
+  const [aiRec, setAiRec] = useState(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState(null);
+
+  /* ── Fetch AI recommendation from Gemini ── */
+  async function fetchAiRecommendation(diseaseResult) {
+    setAiLoading(true);
+    setAiError(null);
+    setAiRec(null);
+    try {
+      const res = await fetch("http://127.0.0.1:5000/api/ai-recommendation", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          disease: diseaseResult.predicted_class,
+          confidence: diseaseResult.confidence,
+          disease_area_pct: diseaseResult.visualizations?.disease_area_pct || 0,
+        }),
+      });
+      const data = await res.json();
+      if (data.success && data.ai_recommendation) {
+        setAiRec(data.ai_recommendation);
+      } else {
+        setAiError(data.error || "Failed to get AI recommendation");
+      }
+    } catch (err) {
+      setAiError("Could not reach AI service. Check your Gemini API key in backend/.env");
+    } finally {
+      setAiLoading(false);
+    }
+  }
+
   /* ── Map state ── */
   const [reports, setReports] = useState([]);
   const [reportsLoading, setReportsLoading] = useState(true);
@@ -439,6 +472,8 @@ export default function DiseasePredictor() {
     setPreview(null);
     setResult(null);
     setError(null);
+    setAiRec(null);
+    setAiError(null);
     if (inputRef.current) inputRef.current.value = "";
   }
 
@@ -461,6 +496,7 @@ export default function DiseasePredictor() {
         timeout: 60000,
       });
       setResult(res.data);
+      if (res.data?.success) fetchAiRecommendation(res.data);
     } catch (err) {
       setError(
         err?.response?.data?.error ||
@@ -481,6 +517,7 @@ export default function DiseasePredictor() {
     try {
       const res = await axios.post(ESP32_API_URL, { esp32_ip: esp32Ip }, { timeout: 30000 });
       setResult(res.data);
+      if (res.data?.success) fetchAiRecommendation(res.data);
       // Show the combined visualization as the preview
       if (res.data?.visualizations?.combined) {
         setPreview(res.data.visualizations.combined);
@@ -1047,6 +1084,157 @@ export default function DiseasePredictor() {
                   </div>
                 )}
               </div>
+            </div>
+          )}
+
+          {/* ══ GEMINI AI PERSONALIZED RECOMMENDATIONS ══ */}
+          {(aiLoading || aiRec || aiError) && (
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+              <div className="px-6 py-4 border-b border-gray-100 flex items-center gap-3">
+                <div className="w-9 h-9 bg-gradient-to-br from-purple-500 to-blue-500 rounded-lg flex items-center justify-center text-white text-lg">✨</div>
+                <div className="flex-1">
+                  <h2 className="font-semibold text-gray-800">AI-Powered Recommendations</h2>
+                  <p className="text-xs text-gray-500">Personalized by Gemini AI — based on your specific results</p>
+                </div>
+                {aiLoading && (
+                  <div className="flex items-center gap-2 text-xs text-purple-600 font-medium">
+                    <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                    </svg>
+                    Thinking...
+                  </div>
+                )}
+                {aiRec && (
+                  <span className="text-xs bg-purple-100 text-purple-700 px-3 py-1 rounded-full font-semibold">Gemini AI</span>
+                )}
+              </div>
+
+              {/* Loading skeleton */}
+              {aiLoading && (
+                <div className="p-6 space-y-4 animate-pulse">
+                  <div className="h-5 bg-gradient-to-r from-purple-100 to-blue-100 rounded-lg w-3/4" />
+                  <div className="h-4 bg-gray-200 rounded-lg w-full" />
+                  <div className="h-4 bg-gray-200 rounded-lg w-5/6" />
+                  <div className="grid grid-cols-3 gap-3 mt-4">
+                    {[1,2,3].map(i => <div key={i} className="h-20 bg-purple-50 rounded-xl" />)}
+                  </div>
+                  <div className="h-4 bg-gray-200 rounded-lg w-4/5" />
+                  <div className="h-4 bg-gray-200 rounded-lg w-full" />
+                </div>
+              )}
+
+              {/* Error */}
+              {aiError && !aiLoading && (
+                <div className="p-6">
+                  <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-sm text-red-700 flex items-start gap-2">
+                    <span className="mt-0.5">⚠️</span>
+                    <div>
+                      <p className="font-medium">AI Recommendation unavailable</p>
+                      <p className="text-xs mt-1 text-red-500">{aiError}</p>
+                      <p className="text-xs mt-2 text-gray-500">
+                        Get a free API key from <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer" className="underline text-blue-600">aistudio.google.com/apikey</a> and add it to <code className="bg-gray-100 px-1 rounded">backend/.env</code>
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* AI Results */}
+              {aiRec && !aiLoading && (
+                <div className="p-6 space-y-4">
+                  {/* Severity Assessment */}
+                  {aiRec.ai_severity_assessment && (
+                    <div className="bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-xl p-4">
+                      <p className="text-xs font-bold text-purple-600 uppercase mb-2">🧠 AI Severity Assessment</p>
+                      <p className="text-sm text-gray-700 leading-relaxed">{aiRec.ai_severity_assessment}</p>
+                    </div>
+                  )}
+
+                  {/* AI N-P-K cards */}
+                  {(aiRec.ai_nitrogen || aiRec.ai_phosphorus || aiRec.ai_potassium) && (
+                    <div className="grid grid-cols-3 gap-3">
+                      {[
+                        { key: "ai_nitrogen", label: "Nitrogen (N)", icon: "🌿", color: "emerald" },
+                        { key: "ai_phosphorus", label: "Phosphorus (P)", icon: "🌱", color: "blue" },
+                        { key: "ai_potassium", label: "Potassium (K)", icon: "⚡", color: "amber" },
+                      ].map(({ key, label, icon, color }) => {
+                        const item = aiRec[key];
+                        if (!item) return null;
+                        const lvl = item.level || "—";
+                        const badgeMap = { Low: "bg-gray-100 text-gray-600", Medium: "bg-yellow-100 text-yellow-700", High: "bg-orange-100 text-orange-700", "Very High": "bg-red-100 text-red-700" };
+                        const barMap = { Low: "20%", Medium: "45%", High: "65%", "Very High": "85%" };
+                        return (
+                          <div key={key} className={`bg-${color}-50 rounded-xl p-4 border border-${color}-100 flex flex-col items-center text-center`}>
+                            <span className="text-2xl mb-1">{icon}</span>
+                            <p className="text-xs text-gray-500 font-medium mb-1">{label}</p>
+                            <span className={`text-xs font-bold px-2 py-0.5 rounded-full mb-2 ${badgeMap[lvl] || "bg-gray-100 text-gray-600"}`}>{lvl}</span>
+                            <div className="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden mb-2">
+                              <div className="bg-purple-500 h-1.5 rounded-full transition-all duration-700" style={{ width: barMap[lvl] || "30%" }} />
+                            </div>
+                            <p className="text-[10px] text-gray-500 leading-snug">{item.detail}</p>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* Action + Fertilizer from AI */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {aiRec.ai_action && (
+                      <div className="bg-purple-50 border border-purple-100 rounded-xl p-4">
+                        <p className="text-xs font-bold text-purple-600 uppercase mb-2">⚕️ AI Action Plan</p>
+                        <p className="text-sm text-gray-700 leading-relaxed">{aiRec.ai_action}</p>
+                      </div>
+                    )}
+                    {aiRec.ai_fertilizer && (
+                      <div className="bg-blue-50 border border-blue-100 rounded-xl p-4">
+                        <p className="text-xs font-bold text-blue-600 uppercase mb-2">💊 AI Fertilizer Plan</p>
+                        <p className="text-sm text-gray-700 leading-relaxed">{aiRec.ai_fertilizer}</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Fungicide + Organic Alternative */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {aiRec.ai_fungicide && (
+                      <div className="bg-rose-50 border border-rose-100 rounded-xl p-4">
+                        <p className="text-xs font-bold text-rose-600 uppercase mb-2">🧴 Fungicide Recommendation</p>
+                        <p className="text-sm text-gray-700 leading-relaxed">{aiRec.ai_fungicide}</p>
+                      </div>
+                    )}
+                    {aiRec.ai_organic_alternative && (
+                      <div className="bg-green-50 border border-green-100 rounded-xl p-4">
+                        <p className="text-xs font-bold text-green-600 uppercase mb-2">🌿 Organic Alternative</p>
+                        <p className="text-sm text-gray-700 leading-relaxed">{aiRec.ai_organic_alternative}</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Prevention */}
+                  {aiRec.ai_prevention && (
+                    <div className="bg-sky-50 border border-sky-100 rounded-xl p-4">
+                      <p className="text-xs font-bold text-sky-600 uppercase mb-2">🛡️ Prevention for Next Season</p>
+                      <p className="text-sm text-gray-700 leading-relaxed">{aiRec.ai_prevention}</p>
+                    </div>
+                  )}
+
+                  {/* AI Tips */}
+                  {aiRec.ai_tips?.length > 0 && (
+                    <div className="bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-100 rounded-xl p-4">
+                      <p className="text-xs font-bold text-purple-600 uppercase mb-3">💡 AI Expert Tips</p>
+                      <ul className="space-y-2">
+                        {aiRec.ai_tips.map((tip, i) => (
+                          <li key={i} className="flex items-start gap-2 text-sm text-gray-700">
+                            <span className="text-purple-500 font-bold mt-0.5 shrink-0">✦</span>
+                            {tip}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
 

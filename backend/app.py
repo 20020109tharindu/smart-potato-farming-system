@@ -1,9 +1,12 @@
 from flask import Flask, request, jsonify
-import os, uuid, json
+import os, uuid, json, requests
 from datetime import datetime
 import numpy as np
 from flask_cors import CORS
 from utils.predict import predict_one
+from dotenv import load_dotenv
+
+load_dotenv()
 
 app = Flask(__name__)
 CORS(app)
@@ -437,6 +440,136 @@ def delete_disease_report(report_id):
         return jsonify({"error": "Report not found"}), 404
     _save_reports(filtered)
     return jsonify({"deleted": report_id})
+
+
+# ── Gemini AI Personalized Recommendations ───────────────────────────────────
+_GEMINI_MODELS = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-2.0-flash-lite"]
+_GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta/models"
+
+
+def _call_gemini(prompt_text):
+    """Call Gemini REST API directly (no deprecated SDK). Returns parsed JSON."""
+    import time as _time
+
+    api_key = os.environ.get("GEMINI_API_KEY", "").strip()
+    if not api_key or api_key == "YOUR_KEY_HERE":
+        raise ValueError(
+            "GEMINI_API_KEY not set. Get a free key from https://aistudio.google.com/apikey "
+            "and add it to backend/.env"
+        )
+
+    payload = {"contents": [{"parts": [{"text": prompt_text}]}]}
+    last_error = None
+
+    for model_name in _GEMINI_MODELS:
+        for attempt in range(2):
+            try:
+                url = f"{_GEMINI_API_BASE}/{model_name}:generateContent?key={api_key}"
+                print(f"[Gemini] Trying {model_name} (attempt {attempt+1}/2)…")
+                resp = requests.post(url, json=payload, timeout=30)
+
+                if resp.status_code == 429:
+                    last_error = f"429 rate limit on {model_name}"
+                    if attempt < 1:
+                        _time.sleep(5)
+                        continue
+                    break  # next model
+
+                resp.raise_for_status()
+                data = resp.json()
+
+                # Extract text from response
+                text = data["candidates"][0]["content"]["parts"][0]["text"].strip()
+
+                # Clean up markdown code blocks
+                if text.startswith("```"):
+                    text = text.split("\n", 1)[1]
+                if text.endswith("```"):
+                    text = text.rsplit("```", 1)[0]
+                text = text.strip()
+
+                return json.loads(text)
+
+            except (requests.exceptions.HTTPError, KeyError, json.JSONDecodeError) as e:
+                last_error = str(e)
+                if "429" in str(getattr(e, 'response', '') or ''):
+                    if attempt < 1:
+                        _time.sleep(5)
+                        continue
+                    break
+                raise
+            except Exception as e:
+                last_error = str(e)
+                err_lower = last_error.lower()
+                if "429" in last_error or "quota" in err_lower:
+                    if attempt < 1:
+                        _time.sleep(5)
+                        continue
+                    break
+                raise
+
+    raise RuntimeError(f"All Gemini models unavailable. Last: {last_error}")
+
+
+@app.route("/api/ai-recommendation", methods=["POST"])
+def ai_recommendation():
+    """
+    Generate personalized fertilizer & treatment recommendations using Gemini AI.
+    Expects JSON: { disease, confidence, disease_area_pct, soil_type?, climate?, growth_stage? }
+    """
+    data = request.get_json(force=True)
+    disease = data.get("disease", "Unknown")
+    confidence = data.get("confidence", 0)
+    disease_area_pct = data.get("disease_area_pct", 0)
+    soil_type = data.get("soil_type", "not specified")
+    climate = data.get("climate", "tropical, Sri Lanka")
+    growth_stage = data.get("growth_stage", "not specified")
+
+    prompt = f"""You are an expert agricultural scientist specializing in potato farming and plant pathology.
+
+A farmer's potato leaf has been analyzed by a deep learning model. Here are the results:
+
+- **Detected Disease**: {disease}
+- **Model Confidence**: {confidence}%
+- **Diseased Leaf Area**: {disease_area_pct}%
+- **Soil Type**: {soil_type}
+- **Climate/Region**: {climate}
+- **Growth Stage**: {growth_stage}
+
+Based on this analysis, provide PERSONALIZED and DETAILED recommendations in the following JSON format ONLY (no markdown, no code blocks, just raw JSON):
+
+{{
+  "ai_action": "Detailed immediate action steps the farmer should take (2-3 sentences)",
+  "ai_fertilizer": "Specific fertilizer recommendation with exact N-P-K ratios and application rates (2-3 sentences)",
+  "ai_nitrogen": {{ "level": "Low|Medium|High|Very High", "detail": "Brief explanation" }},
+  "ai_phosphorus": {{ "level": "Low|Medium|High|Very High", "detail": "Brief explanation" }},
+  "ai_potassium": {{ "level": "Low|Medium|High|Very High", "detail": "Brief explanation" }},
+  "ai_tips": [
+    "Tip 1 - specific and actionable",
+    "Tip 2 - specific and actionable",
+    "Tip 3 - specific and actionable",
+    "Tip 4 - specific and actionable",
+    "Tip 5 - specific and actionable"
+  ],
+  "ai_fungicide": "Specific fungicide name, dosage, and application frequency",
+  "ai_organic_alternative": "Organic/natural treatment option if available",
+  "ai_prevention": "How to prevent this disease in the next crop cycle",
+  "ai_severity_assessment": "Your expert assessment of the severity based on the disease area percentage and confidence"
+}}
+
+Important: Return ONLY valid JSON. No markdown formatting, no code blocks, no extra text."""
+
+    try:
+        ai_rec = _call_gemini(prompt)
+        return jsonify({"success": True, "ai_recommendation": ai_rec})
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+    except RuntimeError as e:
+        return jsonify({"error": str(e)}), 429
+    except json.JSONDecodeError:
+        return jsonify({"success": True, "ai_recommendation": {"ai_action": "AI response could not be parsed.", "ai_tips": []}}), 200
+    except Exception as e:
+        return jsonify({"error": f"Gemini AI error: {str(e)}"}), 500
 
 
 # ── Health check ─────────────────────────────────────────────────────────────

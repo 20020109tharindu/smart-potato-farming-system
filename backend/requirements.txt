@@ -17,3 +17,5 @@ scikit-learn
 flask
 requests
 gdown
+google-generativeai
+python-dotenv
