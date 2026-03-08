@@ -4,7 +4,15 @@ import { useAuth } from "../contexts/AuthContext";
 import potatoField from "../assets/potato feild.jpeg";
 import harvestReady from "../assets/havest ready.jpg";
 import freshPotatoes from "../assets/fresh potato.jpg";
+
 import richSoil from "../assets/soil best.png";
+import soilTempImg from "../assets/soil temp.png";
+import moistureImg from "../assets/soil-moisture.jpg";
+import activeFieldImg from "../assets/activeFieldImg .png";
+import harvestImg from "../assets/havest ready.jpg";
+import alertImg from "../assets/alert.jpg";
+import seedReadinessImg from "../assets/seed readnes.png";
+import costAnalysisImg from "../assets/cost analysis.png";
 /* ═══════════════════════════════════════════════════════════════════════════
    STYLES
 ═══════════════════════════════════════════════════════════════════════════ */
@@ -389,36 +397,36 @@ const STATS = [
     label: "Avg. Soil Temp",
     value: "18 °C",
     sub: "Optimal range",
-    img: "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=400&q=85",
+    img: soilTempImg,
   },
   {
     label: "Moisture Level",
     value: "62 %",
     sub: "Adequate",
-    img: "https://images.unsplash.com/photo-1574943320219-553eb213f72d?w=400&q=85",
+    img: moistureImg,
   },
   {
     label: "Active Fields",
     value: "3",
     sub: "In season",
-    img: "https://images.unsplash.com/photo-1464226184884-fa280b87c399?w=400&q=85",
+    img: activeFieldImg,
   },
   {
     label: "Days to Harvest",
     value: "47",
     sub: "On schedule",
-    img: "https://images.unsplash.com/photo-1518977676601-b53f82aba655?w=400&q=85",
+    img: harvestImg,
   },
   {
     label: "Open Alerts",
     value: "2",
     sub: "Needs review",
-    img: "https://images.unsplash.com/photo-1587132137056-bfbf0166836e?w=400&q=85",
+    img: alertImg,
   },
 ];
 
 const MODULES = [
-  {
+   {
     id: "seed",
     title: "Seed Readiness",
     path: "/app/seed-readiness",
@@ -430,7 +438,7 @@ const MODULES = [
     btnColor: "#fff",
     statusColor: "#4caf76",
     statusLabel: "Ready",
-    img: "https://images.unsplash.com/photo-1632921397936-3e6218f55cad?w=700&q=85",
+    img: seedReadinessImg,
     desc: "Evaluate seed potato quality before planting. AI-driven germination scores and batch recommendations.",
   },
   {
@@ -464,21 +472,21 @@ const MODULES = [
     desc: "Analyse soil composition, pH levels and nutrients to unlock your field's maximum yield potential.",
     disabled: true,
   },
-  {
-    id: "cost",
-    title: "Cost Analysis",
-    path: "/app/cost",
-    icon: "📊",
-    tag: "Active",
-    tagStyle: { background: "#fef3e0", color: "#7a4a08" },
-    iconBg: "#fef3e0",
-    btnBg: "#d4882b",
-    btnColor: "#fff",
-    statusColor: "#d4882b",
-    statusLabel: "Ready",
-    img: "https://images.unsplash.com/photo-1543286386-713bdd548da4?w=700&q=85",
-    desc: "Track inputs, labour and harvest costs. Forecast ROI and get margin optimisation recommendations.",
-  },
+ {
+  id: "cost",
+  title: "Cost Analysis",
+  path: "/app/cost",
+  icon: "📊",
+  tag: "Active",
+  tagStyle: { background: "#fef3e0", color: "#7a4a08" },
+  iconBg: "#fef3e0",
+  btnBg: "#d4882b",
+  btnColor: "#fff",
+  statusColor: "#d4882b",
+  statusLabel: "Ready",
+  img: costAnalysisImg,
+  desc: "Track inputs, labour and harvest costs. Forecast ROI and get margin optimisation recommendations.",
+}
 ];
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -589,10 +597,7 @@ export default function AppDashboard() {
                   overview of your farm's health today.
                 </div>
                 <div className='hero-stats'>
-                  {[
-                   
-                    
-                  ].map((s) => (
+                  {[].map((s) => (
                     <div key={s.label}>
                       <div className='hs-label'>{s.label}</div>
                       <div className='hs-val'>{s.val}</div>
@@ -611,7 +616,6 @@ export default function AppDashboard() {
                     alt={c.label}
                     className='col-img'
                     loading='lazy'
-                   
                   />
                   <div className='col-label'>{c.label}</div>
                 </div>
@@ -627,9 +631,6 @@ export default function AppDashboard() {
                     alt={s.label}
                     className='stat-img'
                     loading='lazy'
-                    onError={(e) => {
-                      e.currentTarget.src = `https://picsum.photos/seed/stat${i}/300/150`;
-                    }}
                   />
                   <div className='stat-body'>
                     <div className='stat-label'>{s.label}</div>
@@ -717,9 +718,6 @@ export default function AppDashboard() {
                 ))}
               </div>
             </div>
-
-            
-            
           </div>
         </main>
       </div>

@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 const Icon = ({
@@ -476,9 +475,9 @@ export default function Dashboard() {
   const navigate = useNavigate();
 
   const quickStats = [
-    { icon: "📁", label: "Datasets", value: "3", cls: "green" },
-    { icon: "🌾", label: "Avg. Predicted Yield", value: "18.7t", cls: "amber" },
-    { icon: "🔄", label: "Scenarios Run", value: "12", cls: "blue" },
+    { icon: "🌾", cls: "green", value: "18.4 t/ha", label: "Expected Yield" },
+    { icon: "💰", cls: "amber", value: "LKR 284K", label: "Est. Revenue" },
+    { icon: "📈", cls: "blue", value: "32%", label: "Profit Margin" },
   ];
 
   const actions = [
@@ -524,8 +523,13 @@ export default function Dashboard() {
       detail: "New rate: LKR 85/kg",
       time: "5 hrs ago",
     },
-    
-     
+    {
+      icon: "🌱",
+      cls: "a",
+      action: 'Reviewed recommendations for "Maha-Plot-B"',
+      detail: "Strategy: High-yield · Season: Maha",
+      time: "1 day ago",
+    },
   ];
 
   const perfMetrics = [
@@ -569,9 +573,7 @@ export default function Dashboard() {
                 <LeafIcon size={28} />
               </div>
               <div>
-                <div className='db-hero-eyebrow'>
-                  AgriIntelligence · Sri Lanka
-                </div>
+                <div className='db-hero-eyebrow'>SmartPotato · Sri Lanka</div>
                 <div className='db-hero-title'>Potato Farm Analytics</div>
                 <div className='db-hero-sub'>
                   Smart farming decisions powered by ML
@@ -580,10 +582,10 @@ export default function Dashboard() {
             </div>
             <div className='db-hero-right'>
               <div className='db-hero-welcome'>
-                <div className='db-hero-welcome-label'>Welcome back,</div>
-                <div className='db-hero-welcome-name'>Farmer</div>
+                <div className='db-hero-welcome-label'>Current Season</div>
+                <div className='db-hero-welcome-name'>Maha 2025/26</div>
               </div>
-              <div className='db-avatar'>F</div>
+              <div className='db-avatar'>🥔</div>
             </div>
           </div>
         </div>
