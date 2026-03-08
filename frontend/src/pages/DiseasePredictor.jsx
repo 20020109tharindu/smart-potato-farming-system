@@ -733,10 +733,10 @@ export default function DiseasePredictor() {
       ) : (
 
       /* ═══════════════ PREDICTOR VIEW ═══════════════ */
-      <div className="p-6 grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-7xl mx-auto">
+      <div className={`p-6 max-w-7xl mx-auto ${result ? 'grid grid-cols-1 lg:grid-cols-[420px_1fr] gap-6' : 'flex justify-center'}`}>
 
         {/* ══ LEFT — Upload ══ */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className={`bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden ${result ? 'lg:sticky lg:top-6 lg:self-start' : 'w-full max-w-lg'}`}>
           <div className="px-6 py-4 border-b border-gray-100 flex items-center gap-3">
             <div className="w-9 h-9 bg-emerald-100 rounded-lg flex items-center justify-center text-emerald-700 text-lg">🖼</div>
             <div className="flex-1">
@@ -912,7 +912,8 @@ export default function DiseasePredictor() {
           )}
         </div>
 
-        {/* ══ RIGHT — Results ══ */}
+        {/* ══ RIGHT — Results (only shown when loading or result exists) ══ */}
+        {(loading || result) && (
         <div className="space-y-5">
 
           {/* Analysis Results card */}
@@ -941,15 +942,6 @@ export default function DiseasePredictor() {
                 <div className="grid grid-cols-3 gap-3 mt-4">
                   {[1,2,3].map(i => <div key={i} className="h-20 bg-gray-100 rounded-xl" />)}
                 </div>
-              </div>
-            )}
-
-            {/* Empty state */}
-            {!loading && !result && (
-              <div className="p-10 text-center text-gray-400">
-                <div className="text-5xl mb-3">🔬</div>
-                <p className="font-medium">No analysis yet</p>
-                <p className="text-sm mt-1">Upload a leaf image and click Analyze</p>
               </div>
             )}
 
@@ -1257,6 +1249,7 @@ export default function DiseasePredictor() {
           )}
 
         </div>
+        )}
       </div>
       )}
     </div>
