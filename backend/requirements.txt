@@ -21,3 +21,5 @@ pandas
 xgboost
 lightgbm
 catboost
+google-generativeai
+python-dotenv
