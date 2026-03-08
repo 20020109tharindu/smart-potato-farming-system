@@ -471,7 +471,7 @@ const InputPage = () => {
   const validate = () => {
     const e = {};
     if (!formData.season) e.season = "Please select a growing season";
-    if (!formData.district.trim()) e.district = "District name is required";
+    if (!formData.district) e.district = "Please select a district";
     if (!formData.field_size_acres || +formData.field_size_acres <= 0)
       e.field_size_acres = "Enter a valid field size";
     if (!formData.soil_type) e.soil_type = "Please select a soil type";
@@ -646,16 +646,20 @@ const InputPage = () => {
                       </span>
                       District <span className='ag-req'>*</span>
                     </label>
-                    <div className='ag-wrap'>
-                      <input
-                        type='text'
+
+                    <div className='ag-wrap ag-sel-wrap'>
+                      <select
                         name='district'
                         value={formData.district}
                         onChange={onChange}
-                        placeholder='e.g. Nuwara Eliya'
-                        className={`ag-input ${formData.district ? "ok" : ""} ${errors.district ? "err" : ""}`}
-                      />
+                        className={`ag-select ${formData.district ? "ok" : ""} ${errors.district ? "err" : ""}`}
+                      >
+                        <option value=''>Select District…</option>
+                        <option value='Badulla'>Badulla</option>
+                        <option value='Nuwara_Eliya'>Nuwara Eliya</option>
+                      </select>
                     </div>
+
                     {errors.district && (
                       <span className='ag-error'>⚠ {errors.district}</span>
                     )}
@@ -719,7 +723,9 @@ const InputPage = () => {
                         <option value='Clay_Loam'>
                           Clay Loam — water-retentive
                         </option>
-                        <option value='Sandy_Loam'>Sandy — well-draining</option>
+                        <option value='Sandy_Loam'>
+                          Sandy — well-draining
+                        </option>
                         <option value='Loamy'>Loamy — nutrient-rich</option>
                       </select>
                     </div>
