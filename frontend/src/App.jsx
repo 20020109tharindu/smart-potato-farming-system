@@ -12,6 +12,7 @@ import SignIn from "./pages/SignIn";
 import SignUp from "./pages/SignUp";
 import Landing from "./pages/Landing";
 import Layout from "./components/Layout";
+import AppDashboard from "./components/Dashboard";
 
 function App() {
   const [backendMessage, setBackendMessage] = useState("Loading...");
@@ -33,9 +34,10 @@ function App() {
 
         {/* Protected */}
         <Route path='/app' element={<Layout />}>
+          <Route index element={<AppDashboard />} />
           {/* Seed Readiness */}
           <Route path='seed-readiness' element={<SeedReadinessPage />} />
-          
+
           {/* Empty routes (coming soon) */}
           <Route path='soil-health' element={null} />
           <Route path='disease' element={<DiseasePredictor />} />
