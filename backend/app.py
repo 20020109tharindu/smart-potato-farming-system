@@ -1,11 +1,132 @@
 from flask import Flask, request, jsonify
 import os, uuid
 import numpy as np
+import pandas as pd
+import pickle
+import warnings
 from flask_cors import CORS
 from utils.predict import predict_one
 
+warnings.filterwarnings("ignore")
+
 app = Flask(__name__)
 CORS(app)
+
+# ── Yield prediction: lazy-loaded ML artifacts ───────────────────────────────
+MODEL_DIR = os.path.join(os.path.dirname(__file__), "models")
+_yield_artifacts = None
+
+# Required .pkl files for yield/cost prediction (can be downloaded from Google Drive zip)
+YIELD_PKL_FILES = [
+    "best_price_model.pkl", "best_yield_model.pkl", "scaler.pkl",
+    "label_encoders.pkl", "feature_columns.pkl",
+    "seed_cost_lkr_model.pkl", "fertilizer_cost_lkr_model.pkl", "labor_cost_lkr_model.pkl",
+    "cost_scaler.pkl", "cost_label_encoders.pkl", "cost_feature_columns.pkl",
+]
+
+
+def _download_yield_models_if_needed():
+    """If any yield .pkl is missing and config has yield_models_zip URL, download zip and unzip to models/."""
+    if all(os.path.exists(os.path.join(MODEL_DIR, f)) for f in YIELD_PKL_FILES):
+        return
+    config_path = os.path.join(os.path.dirname(__file__), "model_config.json")
+    if not os.path.exists(config_path):
+        return
+    import json
+    with open(config_path) as f:
+        config = json.load(f)
+    if not config.get("auto_download", False):
+        return
+    url = config.get("google_drive_urls", {}).get("yield_models_zip")
+    if not url or not url.strip():
+        return
+    if "/file/d/" in url:
+        file_id = url.split("/file/d/")[1].split("/")[0]
+    elif "id=" in url:
+        file_id = url.split("id=")[1].split("&")[0]
+    else:
+        file_id = url.strip()
+    os.makedirs(MODEL_DIR, exist_ok=True)
+    zip_path = os.path.join(MODEL_DIR, "yield_models.zip")
+    print("[Yield Models] Downloading yield_models.zip from Google Drive...")
+    try:
+        import gdown
+        import zipfile
+        import shutil
+        gdown.download(f"https://drive.google.com/uc?id={file_id}", zip_path, quiet=False)
+        with zipfile.ZipFile(zip_path, "r") as z:
+            z.extractall(MODEL_DIR)
+        if os.path.exists(zip_path):
+            os.remove(zip_path)
+        # If zip had a subfolder (e.g. yield_models/*.pkl), move .pkl files into models/
+        for name in YIELD_PKL_FILES:
+            dst = os.path.join(MODEL_DIR, name)
+            if os.path.exists(dst):
+                continue
+            for root, _, files in os.walk(MODEL_DIR):
+                if root == MODEL_DIR:
+                    continue
+                if name in files:
+                    src = os.path.join(root, name)
+                    shutil.move(src, dst)
+                    break
+        print("[Yield Models] Download and extract complete.")
+    except Exception as e:
+        if os.path.exists(zip_path):
+            try:
+                os.remove(zip_path)
+            except Exception:
+                pass
+        print(f"[Yield Models] Download failed: {e}. Add .pkl files to backend/models/ or set yield_models_zip in model_config.json.")
+
+
+def get_yield_artifacts():
+    """Load price/yield and cost models once. Downloads from Google Drive if configured and files missing."""
+    global _yield_artifacts
+    if _yield_artifacts is not None:
+        return _yield_artifacts
+    _download_yield_models_if_needed()
+    try:
+        with open(os.path.join(MODEL_DIR, "best_price_model.pkl"), "rb") as f:
+            price_model = pickle.load(f)
+        with open(os.path.join(MODEL_DIR, "best_yield_model.pkl"), "rb") as f:
+            yield_model = pickle.load(f)
+        with open(os.path.join(MODEL_DIR, "scaler.pkl"), "rb") as f:
+            stage2_scaler = pickle.load(f)
+        with open(os.path.join(MODEL_DIR, "label_encoders.pkl"), "rb") as f:
+            stage2_label_encoders = pickle.load(f)
+        with open(os.path.join(MODEL_DIR, "feature_columns.pkl"), "rb") as f:
+            stage2_features = pickle.load(f)
+        with open(os.path.join(MODEL_DIR, "seed_cost_lkr_model.pkl"), "rb") as f:
+            seed_cost_model = pickle.load(f)
+        with open(os.path.join(MODEL_DIR, "fertilizer_cost_lkr_model.pkl"), "rb") as f:
+            fertilizer_cost_model = pickle.load(f)
+        with open(os.path.join(MODEL_DIR, "labor_cost_lkr_model.pkl"), "rb") as f:
+            labor_cost_model = pickle.load(f)
+        with open(os.path.join(MODEL_DIR, "cost_scaler.pkl"), "rb") as f:
+            cost_scaler = pickle.load(f)
+        with open(os.path.join(MODEL_DIR, "cost_label_encoders.pkl"), "rb") as f:
+            cost_label_encoders = pickle.load(f)
+        with open(os.path.join(MODEL_DIR, "cost_feature_columns.pkl"), "rb") as f:
+            cost_feature_columns = pickle.load(f)
+        potato_varieties = list(stage2_label_encoders["potato_variety"].classes_)
+        _yield_artifacts = {
+            "price_model": price_model,
+            "yield_model": yield_model,
+            "stage2_scaler": stage2_scaler,
+            "stage2_label_encoders": stage2_label_encoders,
+            "stage2_features": stage2_features,
+            "seed_cost_model": seed_cost_model,
+            "fertilizer_cost_model": fertilizer_cost_model,
+            "labor_cost_model": labor_cost_model,
+            "cost_scaler": cost_scaler,
+            "cost_label_encoders": cost_label_encoders,
+            "cost_feature_columns": cost_feature_columns,
+            "POTATO_VARIETIES": potato_varieties,
+        }
+        return _yield_artifacts
+    except FileNotFoundError:
+        return None
 
 UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
@@ -238,6 +359,127 @@ def generate_disease_visualizations(file_path, predicted_class):
     }
 
 
+# ── Yield prediction: Stage 1 (cost) & Stage 2 (price/yield) ─────────────────
+def _predict_costs_stage1(data, artifacts):
+    row = data.copy()
+    for col, enc in artifacts["cost_label_encoders"].items():
+        if col in row:
+            row[col] = enc.transform([row[col]])[0]
+    df = pd.DataFrame([row])
+    df = df.reindex(columns=artifacts["cost_feature_columns"], fill_value=0)
+    X_scaled = artifacts["cost_scaler"].transform(df)
+    seed_cost = artifacts["seed_cost_model"].predict(X_scaled)[0]
+    fert_cost = artifacts["fertilizer_cost_model"].predict(X_scaled)[0]
+    labor_cost = artifacts["labor_cost_model"].predict(X_scaled)[0]
+    return {
+        "seed_cost_lkr": max(0, float(seed_cost)),
+        "fertilizer_cost_lkr": max(0, float(fert_cost)),
+        "labor_cost_lkr": max(0, float(labor_cost)),
+    }
+
+
+def _preprocess_stage2(data, artifacts):
+    df = pd.DataFrame([data])
+    df["total_cost"] = (
+        df["seed_cost_lkr"] + df["fertilizer_cost_lkr"] + df["labor_cost_lkr"]
+    )
+    for col, enc in artifacts["stage2_label_encoders"].items():
+        df[col] = enc.transform(df[col])
+    for col in artifacts["stage2_features"]:
+        if col not in df.columns:
+            df[col] = 0
+    return artifacts["stage2_scaler"].transform(df[artifacts["stage2_features"]])
+
+
+@app.route("/potato_analyze", methods=["POST"])
+def potato_analyze():
+    from suggetion_service import generate_farmer_explanation, generate_action_plan
+
+    artifacts = get_yield_artifacts()
+    if artifacts is None:
+        return jsonify({
+            "error": "Yield prediction models not loaded. Add .pkl files to backend/models/ and restart."
+        }), 503
+
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "JSON body required"}), 400
+
+    predicted_costs = _predict_costs_stage1(data, artifacts)
+    data.update(predicted_costs)
+    total_cost = (
+        predicted_costs["seed_cost_lkr"]
+        + predicted_costs["fertilizer_cost_lkr"]
+        + predicted_costs["labor_cost_lkr"]
+    )
+
+    if data.get("hands_on_money_lkr", 0) < total_cost:
+        return jsonify({
+            "status": "insufficient_funds",
+            "required_cost_lkr": round(total_cost, 2),
+            "available_lkr": data["hands_on_money_lkr"],
+            "deficit_lkr": round(total_cost - data["hands_on_money_lkr"], 2),
+            "cost_breakdown": predicted_costs,
+        })
+
+    results = []
+    for variety in artifacts["POTATO_VARIETIES"]:
+        row = data.copy()
+        row["potato_variety"] = variety
+        X = _preprocess_stage2(row, artifacts)
+        predicted_price = float(artifacts["price_model"].predict(X)[0])
+        predicted_yield_acre = float(artifacts["yield_model"].predict(X)[0])
+        total_yield = predicted_yield_acre * row["field_size_acres"]
+        revenue = total_yield * predicted_price
+        net_profit = revenue - total_cost
+        roi = (net_profit / total_cost) * 100 if total_cost > 0 else 0
+        results.append({
+            "variety": variety,
+            "investment": round(total_cost, 2),
+            "predicted_price": predicted_price,
+            "predicted_yield_acre": predicted_yield_acre,
+            "total_yield": total_yield,
+            "revenue": revenue,
+            "net_profit": net_profit,
+            "roi": roi,
+        })
+
+    results = sorted(results, key=lambda x: x["net_profit"], reverse=True)
+    labels = ["Premium", "Balanced", "Budget"]
+    strategies = []
+    for i, r in enumerate(results[:3]):
+        s_type = labels[i]
+        strategies.append({
+            "strategy": s_type,
+            "type": r["variety"],
+            "investment_lkr": r["investment"],
+            "expected_yield_kg": round(r["total_yield"], 2),
+            "expected_yield_per_acre": round(r["predicted_yield_acre"], 2),
+            "expected_price_per_kg": round(r["predicted_price"], 2),
+            "revenue_lkr": round(r["revenue"], 2),
+            "net_profit_lkr": round(r["net_profit"], 2),
+            "roi_percent": round(r["roi"], 2),
+            "farmer_explanation": generate_farmer_explanation(
+                r["variety"], s_type, r["roi"], r["net_profit"]
+            ),
+            "action_plan": generate_action_plan(r["variety"], s_type),
+        })
+
+    best = strategies[0]
+    return jsonify({
+        "status": "ok",
+        "predicted_costs": predicted_costs,
+        "baseline": {
+            "price_lkr_per_kg": best["expected_price_per_kg"],
+            "yield_per_acre": best["expected_yield_per_acre"],
+            "yield_total": best["expected_yield_kg"],
+        },
+        "strategies": strategies,
+        "strategies_found": len(strategies),
+        "hands_on_money_lkr": data["hands_on_money_lkr"],
+    })
+
+
 # ── Seed readiness endpoint (existing) ──────────────────────────────────────
 @app.route("/predict", methods=["POST"])
 def predict():
@@ -331,8 +573,13 @@ def predict_disease():
 # ── Health check ─────────────────────────────────────────────────────────────
 @app.route("/api/health", methods=["GET"])
 def health():
-    model_ready = os.path.exists(DISEASE_MODEL_PATH)
-    return jsonify({"message": "ok", "disease_model_loaded": model_ready})
+    disease_ready = os.path.exists(DISEASE_MODEL_PATH)
+    yield_ready = get_yield_artifacts() is not None
+    return jsonify({
+        "message": "ok",
+        "disease_model_loaded": disease_ready,
+        "yield_models_loaded": yield_ready,
+    })
 
 
 if __name__ == "__main__":
