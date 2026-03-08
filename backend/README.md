@@ -77,6 +77,24 @@ Run the test script to verify the setup:
 python test_predict.py
 ```
 
+## Yield prediction models (Google Drive)
+
+The app can download yield/cost pickle models from Google Drive if they are not in `backend/models/`.
+
+1. **Create a ZIP** containing these 11 files (no subfolders inside the zip):
+   - `best_price_model.pkl`, `best_yield_model.pkl`, `scaler.pkl`, `label_encoders.pkl`, `feature_columns.pkl`
+   - `seed_cost_lkr_model.pkl`, `fertilizer_cost_lkr_model.pkl`, `labor_cost_lkr_model.pkl`
+   - `cost_scaler.pkl`, `cost_label_encoders.pkl`, `cost_feature_columns.pkl`
+
+2. **Upload** the ZIP to Google Drive and set sharing to **“Anyone with the link can view”**.
+
+3. **Copy the share link** and put it in `model_config.json` under `google_drive_urls.yield_models_zip`:
+   ```json
+   "yield_models_zip": "https://drive.google.com/file/d/YOUR_FILE_ID/view?usp=sharing"
+   ```
+
+4. Keep `"auto_download": true` in `model_config.json`. On first use of `/potato_analyze`, the app will download and extract the zip into `backend/models/`.
+
 ## Dependencies
 
 Key packages (see `requirements.txt`):

@@ -17,3 +17,7 @@ scikit-learn
 flask
 requests
 gdown
+pandas
+xgboost
+lightgbm
+catboost
