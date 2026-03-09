@@ -1,375 +1,364 @@
 import React, { useState } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import { useNavigate, Link } from "react-router-dom";
-import { Eye, EyeOff, Mail, Lock, AlertCircle, Loader2 } from "lucide-react";
+import { Eye, EyeOff, Mail, Lock, AlertCircle } from "lucide-react";
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-/* ─────────────────────────────────────────────
-   Inline CSS — matches AgriIntelligence system
-───────────────────────────────────────────── */
 const CSS = `
-  @import url('https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400&family=DM+Sans:wght@300;400;500;600&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;0,9..144,900;1,9..144,400;1,9..144,700&family=Outfit:wght@300;400;500;600;700&display=swap');
 
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
   :root {
-    --leaf:      #3d7a3a;
-    --leaf-mid:  #5a9e56;
-    --leaf-lt:   #7dc478;
-    --sprout:    #a8d5a2;
-    --fog:       #eef4ed;
-    --cream:     #f8f4ec;
-    --parchment: #f2ead8;
-    --straw:     #e3d9c2;
-    --soil:      #7a5c3a;
-    --ink:       #1e2d1e;
-    --ink-mid:   #3b4f3a;
-    --ink-lt:    #6b8069;
-    --white:     #ffffff;
-    --red:       #c0392b;
-    --red-bg:    #fdf0ee;
-    --blue:      #2563b0;
-    --shadow-sm: 0 1px 3px rgba(30,45,30,0.08);
-    --shadow-md: 0 4px 16px rgba(30,45,30,0.10);
-    --shadow-lg: 0 20px 60px rgba(30,45,30,0.14), 0 2px 8px rgba(30,45,30,0.08);
+    --g950: #0a1a10;
+    --g900: #0f2318;
+    --g800: #1a3d28;
+    --g700: #2a5c3f;
+    --g600: #3e7a52;
+    --g500: #4caf76;
+    --g400: #85dba8;
+    --g300: #aeeac4;
+    --g100: #d9f5e8;
+    --g50:  #f2fbf6;
+    --cream: #faf7f2;
+    --straw: #e8e0cc;
+    --text:  #0a1a10;
+    --mid:   #3b5c48;
+    --soft:  #7a9e8a;
+    --red:   #c0392b;
+    --red-bg:#fdf0ee;
+    --amber: #d4882b;
+    --sh-md: 0 8px 32px rgba(10,26,16,.12);
+    --sh-lg: 0 24px 80px rgba(10,26,16,.18);
   }
 
-  .si-page {
+  .si-root {
     min-height: 100vh;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    font-family: 'Outfit', sans-serif;
     background: var(--cream);
-    background-image:
-      radial-gradient(ellipse 80% 60% at 10% 0%,   rgba(90,158,86,0.12) 0%, transparent 55%),
-      radial-gradient(ellipse 60% 50% at 90% 100%, rgba(122,92,58,0.09) 0%, transparent 55%);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 40px 20px;
-    font-family: 'DM Sans', sans-serif;
+  }
+
+  /* ══════════════ LEFT PANEL ══════════════ */
+  .si-left {
     position: relative;
+    background: var(--g900);
+    display: flex; flex-direction: column;
+    justify-content: space-between;
+    padding: 44px 48px;
     overflow: hidden;
+    min-height: 100vh;
   }
 
-  /* Dot grid texture */
-  .si-page::before {
-    content: '';
-    position: fixed; inset: 0;
-    background-image: radial-gradient(circle, rgba(90,158,86,0.09) 1px, transparent 1px);
-    background-size: 26px 26px;
-    pointer-events: none; z-index: 0;
+  /* Farm photo bg */
+  .si-left-photo {
+    position: absolute; inset: 0;
+    background: url('https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?w=1200&q=85') center/cover no-repeat;
+    opacity: .14;
   }
 
-  /* Decorative botanical ring */
-  .si-page::after {
-    content: '🌿';
-    position: fixed;
-    bottom: -40px; right: -30px;
-    font-size: 280px;
-    opacity: 0.04;
-    pointer-events: none; z-index: 0;
-    transform: rotate(-20deg);
-    filter: grayscale(1);
+  /* Layered gradients */
+  .si-left-grad {
+    position: absolute; inset: 0;
+    background:
+      linear-gradient(160deg, rgba(10,26,16,.97) 0%, rgba(26,61,40,.88) 50%, rgba(42,92,63,.6) 100%);
   }
 
-  .si-wrap {
-    width: 100%; max-width: 440px;
-    position: relative; z-index: 1;
-    animation: si-rise 0.6s cubic-bezier(.22,1,.36,1) both;
+  /* Decorative rings */
+  .si-ring {
+    position: absolute; border-radius: 50%;
+    border: 1px solid rgba(76,175,118,.12);
+    pointer-events: none;
+  }
+  .si-ring-1 { width: 420px; height: 420px; bottom: -120px; right: -120px; }
+  .si-ring-2 { width: 280px; height: 280px; bottom: -60px; right: -60px; }
+  .si-ring-3 { width: 140px; height: 140px; bottom: 0px; right: 0px;
+    background: radial-gradient(circle, rgba(76,175,118,.06), transparent 70%); }
+
+  /* Dot grid */
+  .si-dots {
+    position: absolute; inset: 0;
+    background-image: radial-gradient(circle, rgba(76,175,118,.1) 1px, transparent 1px);
+    background-size: 28px 28px;
+    mask-image: radial-gradient(ellipse 70% 70% at 80% 80%, black 0%, transparent 70%);
   }
 
-  @keyframes si-rise {
-    from { opacity: 0; transform: translateY(28px); }
-    to   { opacity: 1; transform: translateY(0); }
-  }
+  .si-left-inner { position: relative; z-index: 2; }
 
-  /* ── Brand header ── */
-  .si-brand {
-    display: flex; align-items: center; gap: 14px;
-    margin-bottom: 32px;
-    animation: si-fade 0.5s ease both;
-  }
-
-  @keyframes si-fade {
-    from { opacity: 0; transform: translateY(-10px); }
-    to   { opacity: 1; transform: translateY(0); }
-  }
-
-  .si-logo {
-    width: 52px; height: 52px; border-radius: 15px; flex-shrink: 0;
-    background: linear-gradient(140deg, #253f23 0%, #5a9e56 100%);
+  /* Brand */
+  .si-brand { display: flex; align-items: center; gap: 12px; margin-bottom: 0; }
+  .si-brand-mark {
+    width: 44px; height: 44px; border-radius: 13px;
+    background: linear-gradient(135deg, var(--g500), var(--g600));
     display: flex; align-items: center; justify-content: center;
-    font-size: 24px;
-    box-shadow: 0 6px 20px rgba(61,122,58,.3), 0 1px 0 rgba(255,255,255,.1) inset;
+    font-size: 1.3rem;
+    box-shadow: 0 4px 18px rgba(76,175,118,.3);
   }
-
   .si-brand-name {
-    font-family: 'Lora', serif; font-size: 22px; font-weight: 700;
-    color: var(--ink); letter-spacing: -0.01em; line-height: 1.2;
+    font-family: 'Fraunces', serif; font-size: 1.15rem; font-weight: 700;
+    color: #fff; line-height: 1.15; letter-spacing: -.01em;
+  }
+  .si-brand-sub {
+    font-size: .58rem; color: var(--g300);
+    letter-spacing: .18em; text-transform: uppercase; margin-top: 2px;
   }
 
-  .si-brand-tagline {
-    font-size: 11px; font-weight: 400; color: var(--ink-lt);
-    letter-spacing: 0.06em; text-transform: uppercase; margin-top: 2px;
+  /* Left headline */
+  .si-left-body { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+  .si-left-eyebrow {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: rgba(76,175,118,.12);
+    border: 1px solid rgba(76,175,118,.2);
+    border-radius: 30px; padding: 5px 14px;
+    font-size: .66rem; font-weight: 600; letter-spacing: .14em;
+    text-transform: uppercase; color: var(--g300); margin-bottom: 22px;
+  }
+  .si-ldot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: #4ade80; flex-shrink: 0;
+    box-shadow: 0 0 8px rgba(74,222,128,.7);
+    animation: lpulse 2s infinite;
+  }
+  @keyframes lpulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+  .si-left-title {
+    font-family: 'Fraunces', serif;
+    font-size: clamp(2rem, 3.5vw, 2.9rem); font-weight: 900;
+    color: #fff; line-height: 1.08; letter-spacing: -.02em;
+    margin-bottom: 18px;
+  }
+  .si-left-title em { font-style: italic; color: var(--g400); }
+
+  .si-left-desc {
+    font-size: .88rem; color: rgba(255,255,255,.48);
+    line-height: 1.72; max-width: 340px; margin-bottom: 36px;
   }
 
-  /* ── Card ── */
-  .si-card {
-    background: var(--white);
-    border: 1px solid rgba(122,92,58,.12);
-    border-radius: 24px;
-    box-shadow: var(--shadow-lg);
-    overflow: hidden;
+  /* Stats row */
+  .si-left-stats { display: flex; gap: 24px; }
+  .si-lstat {
+    background: rgba(255,255,255,.06);
+    border: 1px solid rgba(255,255,255,.09);
+    border-radius: 14px; padding: 14px 18px;
+    min-width: 100px;
   }
-
-  /* Card top banner */
-  .si-card-banner {
-    background: linear-gradient(108deg, #253f23 0%, #3d7a3a 55%, #5a9e56 100%);
-    padding: 28px 32px 24px;
-    position: relative; overflow: hidden;
+  .si-lstat-val {
+    font-family: 'Fraunces', serif;
+    font-size: 1.5rem; font-weight: 700; color: #fff;
+    line-height: 1; margin-bottom: 4px;
   }
+  .si-lstat-label { font-size: .62rem; color: rgba(255,255,255,.38); letter-spacing: .06em; text-transform: uppercase; }
 
-  .si-card-banner::after {
-    content: ''; position: absolute;
-    right: -24px; bottom: -40px;
-    width: 160px; height: 160px; border-radius: 50%;
-    background: rgba(255,255,255,.055); pointer-events: none;
-  }
-
-  .si-card-banner::before {
-    content: ''; position: absolute;
-    right: 60px; top: -30px;
-    width: 90px; height: 90px; border-radius: 50%;
-    background: rgba(255,255,255,.04); pointer-events: none;
-  }
-
-  .si-banner-eyebrow {
-    font-size: 10px; font-weight: 600; letter-spacing: .18em;
-    text-transform: uppercase; color: var(--sprout); margin-bottom: 6px;
-    position: relative; z-index: 1;
-  }
-
-  .si-banner-title {
-    font-family: 'Lora', serif; font-size: 24px; font-weight: 700;
-    color: #fff; letter-spacing: -.01em; line-height: 1.2;
-    position: relative; z-index: 1;
-  }
-
-  .si-banner-sub {
-    font-size: 13px; color: rgba(255,255,255,.6); margin-top: 5px;
-    font-weight: 300; position: relative; z-index: 1;
-  }
-
-  /* Card body */
-  .si-card-body { padding: 30px 32px 32px; }
-
-  /* ── Error alert ── */
-  .si-alert {
-    display: flex; align-items: flex-start; gap: 10px;
-    background: var(--red-bg); border: 1.5px solid rgba(192,57,43,.2);
-    border-radius: 12px; padding: 14px 16px;
-    margin-bottom: 22px;
-    font-size: 13px; color: var(--red); font-weight: 500;
-    animation: si-shake 0.4s ease;
-  }
-
-  @keyframes si-shake {
-    0%, 100% { transform: translateX(0); }
-    25%       { transform: translateX(-5px); }
-    75%       { transform: translateX(5px); }
-  }
-
-  /* ── Field ── */
-  .si-field { margin-bottom: 18px; }
-
-  .si-label {
-    display: block; font-size: 11px; font-weight: 600;
-    letter-spacing: .1em; text-transform: uppercase;
-    color: var(--ink-lt); margin-bottom: 8px;
-  }
-
-  .si-input-wrap { position: relative; }
-
-  .si-input-icon {
-    position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
-    color: var(--ink-lt); pointer-events: none;
-    display: flex; align-items: center;
-  }
-
-  .si-input {
-    width: 100%; background: var(--cream);
-    border: 1.5px solid var(--straw); border-radius: 10px;
-    padding: 12px 14px 12px 42px;
-    font-family: 'DM Sans', sans-serif; font-size: 14px; color: var(--ink);
-    outline: none; transition: all .18s ease;
-    appearance: none;
-  }
-
-  .si-input::placeholder { color: rgba(107,128,105,.38); }
-
-  .si-input:hover {
-    border-color: rgba(90,158,86,.4); background: #fafdf8;
-  }
-
-  .si-input:focus {
-    border-color: var(--leaf-mid); background: #f6fcf5;
-    box-shadow: 0 0 0 3px rgba(90,158,86,.11);
-  }
-
-  .si-input.ok {
-    border-color: rgba(61,122,58,.3); background: #f7fdf6;
-    padding-right: 42px;
-  }
-
-  .si-input.err {
-    border-color: rgba(192,57,43,.4); background: var(--red-bg);
-    box-shadow: 0 0 0 3px rgba(192,57,43,.07);
-  }
-
-  .si-input-pr { padding-right: 42px; }
-
-  .si-eye-btn {
-    position: absolute; right: 13px; top: 50%; transform: translateY(-50%);
-    background: none; border: none; cursor: pointer;
-    color: var(--ink-lt); padding: 4px;
-    transition: color .15s; line-height: 0;
-  }
-
-  .si-eye-btn:hover { color: var(--leaf); }
-
-  .si-field-error {
-    display: flex; align-items: center; gap: 5px;
-    font-size: 11.5px; color: var(--red); font-weight: 500;
-    margin-top: 6px;
-    animation: si-err-in .2s ease;
-  }
-
-  @keyframes si-err-in {
-    from { opacity:0; transform:translateX(-4px); }
-    to   { opacity:1; transform:translateX(0); }
-  }
-
-  /* ── Forgot link ── */
-  .si-forgot-row {
-    display: flex; justify-content: flex-end;
-    margin-bottom: 22px; margin-top: -6px;
-  }
-
-  .si-forgot {
-    font-size: 12px; font-weight: 500; color: var(--leaf);
-    text-decoration: none; letter-spacing: .02em;
-    transition: color .15s;
-  }
-
-  .si-forgot:hover { color: var(--leaf-mid); text-decoration: underline; }
-
-  /* ── Submit button ── */
-  .si-btn {
-    width: 100%;
-    background: linear-gradient(130deg, #253f23 0%, #3d7a3a 55%, #5a9e56 100%);
-    border: none; border-radius: 12px;
-    padding: 15px 24px;
-    font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600;
-    color: #fff; letter-spacing: .05em; cursor: pointer;
-    display: flex; align-items: center; justify-content: center; gap: 9px;
-    position: relative; overflow: hidden;
-    transition: all .22s ease;
-    box-shadow: 0 4px 18px rgba(61,122,58,.3), 0 1px 0 rgba(255,255,255,.1) inset;
-    margin-bottom: 22px;
-  }
-
-  .si-btn::before {
-    content: ''; position: absolute; inset: 0;
-    background: linear-gradient(to bottom, rgba(255,255,255,.08) 0%, transparent 100%);
-  }
-
-  .si-btn:hover:not(:disabled) {
-    transform: translateY(-1px);
-    box-shadow: 0 8px 28px rgba(61,122,58,.36);
-    filter: brightness(1.06);
-  }
-
-  .si-btn:active:not(:disabled) { transform: translateY(0); }
-
-  .si-btn:disabled { opacity: .65; cursor: not-allowed; }
-
-  .si-spin {
-    width: 16px; height: 16px; flex-shrink: 0;
-    border: 2px solid rgba(255,255,255,.3); border-top-color: #fff;
-    border-radius: 50%; animation: spin .65s linear infinite;
-  }
-
-  @keyframes spin { to { transform: rotate(360deg); } }
-
-  /* ── Divider ── */
-  .si-divider {
-    display: flex; align-items: center; gap: 14px;
-    margin-bottom: 20px;
-  }
-
-  .si-divider-line { flex: 1; height: 1px; background: var(--straw); }
-
-  .si-divider-txt {
-    font-size: 11px; color: var(--ink-lt); white-space: nowrap;
+  /* Left footer */
+  .si-left-foot {
+    font-size: .72rem; color: rgba(255,255,255,.2);
     letter-spacing: .04em;
   }
 
-  /* ── Sign up link ── */
-  .si-signup-btn {
-    display: block; width: 100%;
-    padding: 14px 24px; text-align: center;
-    background: transparent; border: 1.5px solid rgba(61,122,58,.28);
+  /* ══════════════ RIGHT PANEL ══════════════ */
+  .si-right {
+    display: flex; align-items: center; justify-content: center;
+    padding: 48px 52px;
+    background: var(--cream);
+    position: relative; overflow: hidden;
+  }
+
+  /* Subtle bg texture */
+  .si-right::before {
+    content: '';
+    position: absolute; inset: 0;
+    background-image: radial-gradient(circle, rgba(42,92,63,.07) 1px, transparent 1px);
+    background-size: 24px 24px;
+    pointer-events: none;
+  }
+  .si-right::after {
+    content: '';
+    position: absolute; top: -200px; right: -200px;
+    width: 500px; height: 500px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(76,175,118,.07), transparent 70%);
+    pointer-events: none;
+  }
+
+  .si-form-wrap {
+    width: 100%; max-width: 400px;
+    position: relative; z-index: 1;
+    animation: siform 0.65s cubic-bezier(.22,1,.36,1) both;
+  }
+  @keyframes siform {
+    from { opacity: 0; transform: translateY(24px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Form header */
+  .si-form-head { margin-bottom: 34px; }
+  .si-form-eyebrow {
+    font-size: .6rem; font-weight: 700; letter-spacing: .2em;
+    text-transform: uppercase; color: var(--g600); margin-bottom: 10px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .si-form-eyebrow::before {
+    content: ''; display: block; width: 20px; height: 2px;
+    background: var(--g500); border-radius: 2px; flex-shrink: 0;
+  }
+  .si-form-title {
+    font-family: 'Fraunces', serif;
+    font-size: 2rem; font-weight: 900; color: var(--text);
+    line-height: 1.1; letter-spacing: -.02em; margin-bottom: 8px;
+  }
+  .si-form-sub { font-size: .84rem; color: var(--soft); line-height: 1.6; }
+
+  /* Alert */
+  .si-alert {
+    display: flex; align-items: flex-start; gap: 10px;
+    background: var(--red-bg);
+    border: 1.5px solid rgba(192,57,43,.2);
+    border-radius: 12px; padding: 13px 15px;
+    margin-bottom: 22px;
+    font-size: .82rem; color: var(--red); font-weight: 500;
+    animation: sishake 0.4s ease;
+  }
+  @keyframes sishake {
+    0%,100%{transform:translateX(0)} 25%{transform:translateX(-4px)} 75%{transform:translateX(4px)}
+  }
+
+  /* Fields */
+  .si-field { margin-bottom: 20px; }
+  .si-label {
+    display: block; font-size: .65rem; font-weight: 700;
+    letter-spacing: .12em; text-transform: uppercase;
+    color: var(--mid); margin-bottom: 8px;
+  }
+  .si-input-wrap { position: relative; }
+  .si-input-icon {
+    position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
+    color: var(--soft); pointer-events: none;
+    display: flex; align-items: center;
+  }
+  .si-input {
+    width: 100%;
+    background: #fff;
+    border: 1.5px solid var(--straw);
     border-radius: 12px;
-    font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 500;
-    color: var(--leaf); cursor: pointer; text-decoration: none;
-    transition: all .18s ease;
+    padding: 13px 14px 13px 44px;
+    font-family: 'Outfit', sans-serif; font-size: .9rem; color: var(--text);
+    outline: none;
+    transition: border-color .18s, box-shadow .18s, background .18s;
+    box-shadow: 0 1px 4px rgba(10,26,16,.04);
   }
+  .si-input::placeholder { color: rgba(122,158,138,.45); }
+  .si-input:hover { border-color: rgba(76,175,118,.35); }
+  .si-input:focus {
+    border-color: var(--g600);
+    background: #fff;
+    box-shadow: 0 0 0 3px rgba(76,175,118,.1), 0 1px 4px rgba(10,26,16,.06);
+  }
+  .si-input.ok  { border-color: rgba(42,92,63,.3); background: #f8fdf9; }
+  .si-input.err { border-color: rgba(192,57,43,.4); background: var(--red-bg); box-shadow: 0 0 0 3px rgba(192,57,43,.06); }
+  .si-input-pr  { padding-right: 46px; }
 
-  .si-signup-btn:hover {
-    background: var(--fog); border-color: var(--leaf-mid);
+  .si-eye {
+    position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
+    background: none; border: none; cursor: pointer;
+    color: var(--soft); padding: 4px; line-height: 0;
+    transition: color .15s;
+  }
+  .si-eye:hover { color: var(--g600); }
+
+  .si-field-err {
+    display: flex; align-items: center; gap: 5px;
+    font-size: .72rem; color: var(--red); font-weight: 500;
+    margin-top: 6px;
+    animation: errslide .2s ease;
+  }
+  @keyframes errslide { from{opacity:0;transform:translateX(-4px)} to{opacity:1;transform:translateX(0)} }
+
+  /* Forgot */
+  .si-forgot-row { display: flex; justify-content: flex-end; margin: -8px 0 20px; }
+  .si-forgot {
+    font-size: .76rem; font-weight: 600; color: var(--g600);
+    text-decoration: none; letter-spacing: .01em;
+    transition: color .15s;
+  }
+  .si-forgot:hover { color: var(--g700); text-decoration: underline; }
+
+  /* Submit */
+  .si-btn {
+    width: 100%;
+    background: linear-gradient(130deg, var(--g900) 0%, var(--g700) 55%, var(--g600) 100%);
+    border: none; border-radius: 14px;
+    padding: 16px 28px;
+    font-family: 'Outfit', sans-serif; font-size: .9rem; font-weight: 700;
+    color: #fff; letter-spacing: .04em; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 9px;
+    position: relative; overflow: hidden;
+    transition: all .22s ease;
+    box-shadow: 0 6px 24px rgba(42,92,63,.3);
+    margin-bottom: 24px;
+  }
+  .si-btn::before {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(to bottom, rgba(255,255,255,.1), transparent);
+  }
+  .si-btn:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 36px rgba(42,92,63,.38);
+    filter: brightness(1.07);
+  }
+  .si-btn:active:not(:disabled) { transform: translateY(0); }
+  .si-btn:disabled { opacity: .6; cursor: not-allowed; }
+  .si-spin {
+    width: 16px; height: 16px;
+    border: 2px solid rgba(255,255,255,.3); border-top-color: #fff;
+    border-radius: 50%; animation: spn .6s linear infinite; flex-shrink: 0;
+  }
+  @keyframes spn { to{transform:rotate(360deg)} }
+
+  /* Divider */
+  .si-divider {
+    display: flex; align-items: center; gap: 14px; margin-bottom: 18px;
+  }
+  .si-divider-line { flex: 1; height: 1px; background: var(--straw); }
+  .si-divider-txt { font-size: .72rem; color: var(--soft); white-space: nowrap; }
+
+  /* Sign up button */
+  .si-signup-link {
+    display: flex; align-items: center; justify-content: center;
+    width: 100%; padding: 14px;
+    background: transparent;
+    border: 1.5px solid rgba(42,92,63,.2);
+    border-radius: 14px;
+    font-family: 'Outfit', sans-serif; font-size: .88rem; font-weight: 600;
+    color: var(--g700); text-decoration: none;
+    transition: all .2s;
+  }
+  .si-signup-link:hover {
+    background: var(--g50);
+    border-color: rgba(42,92,63,.35);
     transform: translateY(-1px);
-    box-shadow: var(--shadow-sm);
+    box-shadow: var(--sh-md);
   }
 
-  /* ── Footer ── */
+  /* Footer */
   .si-footer {
-    margin-top: 24px; text-align: center;
-    font-size: 11px; color: var(--ink-lt); opacity: .55;
-    line-height: 1.7;
+    margin-top: 28px; text-align: center;
+    font-size: .7rem; color: var(--soft); line-height: 1.8;
   }
-
-  .si-footer a {
-    color: var(--leaf); text-decoration: none; font-weight: 500;
-  }
-
+  .si-footer a { color: var(--g700); text-decoration: none; font-weight: 500; }
   .si-footer a:hover { text-decoration: underline; }
 
-  /* ── Responsive ── */
-  @media (max-width: 480px) {
-    .si-card-banner, .si-card-body { padding-left: 22px; padding-right: 22px; }
-    .si-banner-title { font-size: 20px; }
+  @media (max-width: 820px) {
+    .si-root { grid-template-columns: 1fr; }
+    .si-left  { display: none; }
+    .si-right { padding: 40px 24px; }
   }
 `;
-
-const LeafIcon = () => (
-  <svg
-    width='22'
-    height='22'
-    viewBox='0 0 24 24'
-    fill='none'
-    stroke='white'
-    strokeWidth='1.8'
-    strokeLinecap='round'
-    strokeLinejoin='round'
-  >
-    <path d='M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10z' />
-    <path d='M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12' />
-  </svg>
-);
 
 export default function SignIn() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
+  const [showPwd, setShowPwd] = useState(false);
   const [error, setError] = useState("");
   const [fieldErrors, setFieldErrors] = useState({});
   const [loading, setLoading] = useState(false);
@@ -385,9 +374,8 @@ export default function SignIn() {
     setFieldErrors(e);
     return Object.keys(e).length === 0;
   }
-
-  function handleBlur(field) {
-    setTouched({ ...touched, [field]: true });
+  function handleBlur(f) {
+    setTouched({ ...touched, [f]: true });
     validate();
   }
 
@@ -413,142 +401,162 @@ export default function SignIn() {
   return (
     <>
       <style>{CSS}</style>
-      <div className='si-page'>
-        <div className='si-wrap'>
-          {/* Brand */}
-          <div className='si-brand'>
-            <div className='si-logo'>
-              <LeafIcon />
-            </div>
+      <div className='si-root'>
+        {/* ── LEFT ── */}
+        <div className='si-left'>
+          <div className='si-left-photo' />
+          <div className='si-left-grad' />
+          <div className='si-dots' />
+          <div className='si-ring si-ring-1' />
+          <div className='si-ring si-ring-2' />
+          <div className='si-ring si-ring-3' />
+
+          <div className='si-left-inner si-brand'>
+            <div className='si-brand-mark'>🥔</div>
             <div>
-              <div className='si-brand-name'>AgriIntelligence</div>
-              <div className='si-brand-tagline'>
-                Sri Lanka · ML-Powered Farming
+              <div className='si-brand-name'>SmartPotato</div>
+              <div className='si-brand-sub'>Sri Lanka</div>
+            </div>
+          </div>
+
+          <div className='si-left-inner si-left-body'>
+            
+            
+            <h1 className='si-left-title'>
+              Farm smarter,
+              <br />
+              yield <em>better</em>
+            </h1>
+            <p className='si-left-desc'>
+              AI-driven seed scoring, disease detection, soil monitoring and
+              cost forecasting — built for Sri Lankan farmers.
+            </p>
+            <div className='si-left-stats'>
+              <div className='si-lstat'>
+                <div className='si-lstat-val'>200+</div>
+                <div className='si-lstat-label'>Farmers</div>
+              </div>
+              <div className='si-lstat'>
+                <div className='si-lstat-val'>92%</div>
+                <div className='si-lstat-label'>Accuracy</div>
+              </div>
+              <div className='si-lstat'>
+                <div className='si-lstat-val'>4</div>
+                <div className='si-lstat-label'>AI Modules</div>
               </div>
             </div>
           </div>
 
-          {/* Card */}
-          <div className='si-card'>
-            {/* Banner */}
-            <div className='si-card-banner'>
-              <div className='si-banner-eyebrow'>Secure Access</div>
-              <div className='si-banner-title'>Welcome back</div>
-              <div className='si-banner-sub'>
+          <div className='si-left-inner si-left-foot'>
+            © {new Date().getFullYear()} SmartPotato · Sri Lanka Agri System
+          </div>
+        </div>
+
+        {/* ── RIGHT ── */}
+        <div className='si-right'>
+          <div className='si-form-wrap'>
+            <div className='si-form-head'>
+              <div className='si-form-eyebrow'>Secure Access</div>
+              <div className='si-form-title'>Welcome back 👋</div>
+              <div className='si-form-sub'>
                 Sign in to continue to your farm dashboard
               </div>
             </div>
 
-            {/* Body */}
-            <div className='si-card-body'>
-              {error && (
-                <div className='si-alert'>
-                  <AlertCircle
-                    size={16}
-                    style={{ flexShrink: 0, marginTop: 1 }}
+            {error && (
+              <div className='si-alert'>
+                <AlertCircle
+                  size={16}
+                  style={{ flexShrink: 0, marginTop: 1 }}
+                />
+                <span>{error}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleSubmit} noValidate>
+              <div className='si-field'>
+                <label className='si-label'>Email address</label>
+                <div className='si-input-wrap'>
+                  <span className='si-input-icon'>
+                    <Mail size={16} />
+                  </span>
+                  <input
+                    type='email'
+                    placeholder='you@example.com'
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    onBlur={() => handleBlur("email")}
+                    className={`si-input ${emailOk ? "ok" : ""} ${emailErr ? "err" : ""}`}
                   />
-                  <span>{error}</span>
                 </div>
-              )}
-
-              <form onSubmit={handleSubmit} noValidate>
-                {/* Email */}
-                <div className='si-field'>
-                  <label className='si-label'>Email address</label>
-                  <div className='si-input-wrap'>
-                    <span className='si-input-icon'>
-                      <Mail size={16} />
-                    </span>
-                    <input
-                      type='email'
-                      placeholder='you@example.com'
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      onBlur={() => handleBlur("email")}
-                      className={`si-input ${emailOk ? "ok" : ""} ${emailErr ? "err" : ""}`}
-                    />
+                {emailErr && (
+                  <div className='si-field-err'>
+                    <AlertCircle size={12} />
+                    {fieldErrors.email}
                   </div>
-                  {emailErr && (
-                    <div className='si-field-error'>
-                      <AlertCircle size={12} />
-                      <span>{fieldErrors.email}</span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Password */}
-                <div className='si-field'>
-                  <label className='si-label'>Password</label>
-                  <div className='si-input-wrap'>
-                    <span className='si-input-icon'>
-                      <Lock size={16} />
-                    </span>
-                    <input
-                      type={showPassword ? "text" : "password"}
-                      placeholder='Enter your password'
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      onBlur={() => handleBlur("password")}
-                      className={`si-input si-input-pr ${pwdErr ? "err" : ""}`}
-                    />
-                    <button
-                      type='button'
-                      className='si-eye-btn'
-                      onClick={() => setShowPassword(!showPassword)}
-                      aria-label={
-                        showPassword ? "Hide password" : "Show password"
-                      }
-                    >
-                      {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                    </button>
-                  </div>
-                  {pwdErr && (
-                    <div className='si-field-error'>
-                      <AlertCircle size={12} />
-                      <span>{fieldErrors.password}</span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Forgot */}
-                <div className='si-forgot-row'>
-                  <Link to='/forgot-password' className='si-forgot'>
-                    Forgot password?
-                  </Link>
-                </div>
-
-                {/* Submit */}
-                <button type='submit' disabled={loading} className='si-btn'>
-                  {loading ? (
-                    <>
-                      <span className='si-spin' />
-                      Signing in…
-                    </>
-                  ) : (
-                    "Sign in →"
-                  )}
-                </button>
-              </form>
-
-              {/* Divider */}
-              <div className='si-divider'>
-                <div className='si-divider-line' />
-                <span className='si-divider-txt'>New to Farm Predictions?</span>
-                <div className='si-divider-line' />
+                )}
               </div>
 
-              {/* Sign up link */}
-              <Link to='/signup' className='si-signup-btn'>
-                Create an account
-              </Link>
-            </div>
-          </div>
+              <div className='si-field'>
+                <label className='si-label'>Password</label>
+                <div className='si-input-wrap'>
+                  <span className='si-input-icon'>
+                    <Lock size={16} />
+                  </span>
+                  <input
+                    type={showPwd ? "text" : "password"}
+                    placeholder='Enter your password'
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    onBlur={() => handleBlur("password")}
+                    className={`si-input si-input-pr ${pwdErr ? "err" : ""}`}
+                  />
+                  <button
+                    type='button'
+                    className='si-eye'
+                    onClick={() => setShowPwd(!showPwd)}
+                  >
+                    {showPwd ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
+                {pwdErr && (
+                  <div className='si-field-err'>
+                    <AlertCircle size={12} />
+                    {fieldErrors.password}
+                  </div>
+                )}
+              </div>
 
-          {/* Footer */}
-          <div className='si-footer'>
-            By signing in, you agree to our{" "}
-            <a href='/terms'>Terms of Service</a> and{" "}
-            <a href='/privacy'>Privacy Policy</a>
+              <div className='si-forgot-row'>
+                
+                
+              </div>
+
+              <button type='submit' disabled={loading} className='si-btn'>
+                {loading ? (
+                  <>
+                    <span className='si-spin' /> Signing in…
+                  </>
+                ) : (
+                  "Sign in →"
+                )}
+              </button>
+            </form>
+
+            <div className='si-divider'>
+              <div className='si-divider-line' />
+              <span className='si-divider-txt'>New to SmartPotato?</span>
+              <div className='si-divider-line' />
+            </div>
+
+            <Link to='/signup' className='si-signup-link'>
+              Create a free account →
+            </Link>
+
+            <div className='si-footer'>
+              By signing in you agree to our <a href='/terms'>Terms</a> and{" "}
+              <a href='/privacy'>Privacy Policy</a>
+            </div>
           </div>
         </div>
       </div>
