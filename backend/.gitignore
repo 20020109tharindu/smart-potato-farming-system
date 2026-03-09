@@ -1,0 +1,45 @@
+# ============================================================
+#  BACKEND .gitignore
+#  Model files are NOT shared with team members via GitHub.
+#  Download the trained model separately from the secure link.
+# ============================================================
+
+# --- Trained ML model files (DO NOT COMMIT) ---
+model/*.pkl
+model/*.pickle
+model/*.joblib
+model/*.h5
+model/*.pt
+model/*.pth
+model/*.bin
+model/*.onnx
+model/*.pb
+
+# Keep the model/ folder itself in git (for the README placeholder)
+!model/.gitkeep
+
+# --- Python cache ---
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+
+# --- Virtual environment ---
+venv/
+.venv/
+env/
+ENV/
+
+# --- Environment variables ---
+.env
+.env.*
+!.env.example
+
+# --- OS junk ---
+.DS_Store
+Thumbs.db
+
+# --- Logs & temp ---
+*.log
+*.tmp
