@@ -1,306 +1,201 @@
-import { useState, useRef } from "react";
+import { useRef, useState } from "react";
 import ImageUpload from "../components/ImageUpload";
 
+const fmt = (lbl) =>
+  String(lbl || "unknown")
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+
 export default function SeedReadinessPage() {
-  const fileInputRef = useRef(null);
   const resultRef = useRef(null);
-  const [seedImage, setSeedImage] = useState(null);
-  const [seedImagePreview, setSeedImagePreview] = useState(null);
-  const [analyzing, setAnalyzing] = useState(false);
   const [result, setResult] = useState(null);
   const [rawOutput, setRawOutput] = useState(null);
 
-  // Handle image selection from camera or gallery
-  const handleImageSelect = (e) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setSeedImage(file);
-      // Create preview
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        setSeedImagePreview(event.target?.result);
-      };
-      reader.readAsDataURL(file);
-      // Clear previous results
-      setResult(null);
-    }
-  };
-
-  // Trigger camera capture
-  const handleCameraCapture = (e) => {
-    e.preventDefault();
-    if (fileInputRef.current) {
-      fileInputRef.current.setAttribute("capture", "environment");
-      fileInputRef.current.click();
-    }
-  };
-
-  // Trigger gallery upload
-  const handleGalleryUpload = (e) => {
-    e.preventDefault();
-    if (fileInputRef.current) {
-      fileInputRef.current.removeAttribute("capture");
-      fileInputRef.current.click();
-    }
-  };
-
-  // Clear selected image
-  const clearImage = () => {
-    setSeedImage(null);
-    setSeedImagePreview(null);
-    setResult(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
-  };
-
-  // Analyze seed readiness
-  const analyzeSeed = async () => {
-    if (!seedImage) return;
-
-    setAnalyzing(true);
-    
-    // Simulate API call - replace with actual backend endpoint
-    setTimeout(() => {
-      // Mock result
-      setResult({
-        readiness: "Ready for Planting",
-        confidence: 92,
-        recommendations: [
-          "Seeds appear healthy and mature",
-          "Good size and color consistency",
-          "Recommended planting within 2 weeks"
-        ],
-        quality: {
-          size: "Excellent",
-          color: "Good",
-          texture: "Healthy"
-        }
-      });
-      setAnalyzing(false);
-    }, 2000);
-
-    // TODO: Replace with actual API call
-    // const formData = new FormData();
-    // formData.append('image', seedImage);
-    // const response = await fetch('http://127.0.0.1:5000/api/seed-readiness', {
-    //   method: 'POST',
-    //   body: formData
-    // });
-    // const data = await response.json();
-    // setResult(data);
-    // setAnalyzing(false);
-  };
-
-  // Map backend model outputs to page result shape
   const handlePrediction = (data) => {
     if (!data) {
       setResult(null);
       setRawOutput(null);
       return;
     }
-    // If data contains model keys, map to the UI's expected shape
     if (data.seed_readiness || data.sprout_length) {
-      // keep raw model outputs so we can show exact labels + confidences
       setRawOutput(data);
       const seed = data.seed_readiness || { label: "unknown", confidence: 0 };
       const sprout = data.sprout_length || { label: "unknown", confidence: 0 };
       const shrivel = data.shrivel_level || { label: "unknown", confidence: 0 };
       const damage = data.damage_level || { label: "unknown", confidence: 0 };
 
-      const fmt = (lbl) => String(lbl || "unknown").replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
-      const seedLabel = fmt(seed.label);
-      const sproutLabel = fmt(sprout.label);
-      const shrivelLabel = fmt(shrivel.label);
-      const damageLabel = fmt(damage.label);
       const confidencePct = Math.round((seed.confidence || 0) * 100);
-
       const recommendations = [];
       if ((seed.label || "").toLowerCase().includes("ready")) {
         recommendations.push("Seeds look ready for planting — consider planting within 1–2 weeks.");
       } else {
         recommendations.push("Seeds may not be ready — consider waiting or checking moisture and maturity.");
       }
-      recommendations.push(`Sprout length: ${sproutLabel}`);
-      recommendations.push(`Damage level: ${damageLabel}`);
-      if ((shrivel.label || "").toLowerCase().includes("high") || (shrivel.label || "").toLowerCase().includes("severe")) {
+      recommendations.push(`Sprout length: ${fmt(sprout.label)}`);
+      recommendations.push(`Damage level: ${fmt(damage.label)}`);
+      if (
+        (shrivel.label || "").toLowerCase().includes("high") ||
+        (shrivel.label || "").toLowerCase().includes("severe")
+      ) {
         recommendations.push("High shriveling detected — sort out badly shriveled seeds before planting.");
       }
 
       const mapped = {
-        readiness: seedLabel,
+        readiness: fmt(seed.label),
         confidence: confidencePct,
         recommendations,
         quality: {
-          size: sproutLabel,
-          color: damageLabel,
-          texture: shrivelLabel,
+          size: fmt(sprout.label),
+          color: fmt(damage.label),
+          texture: fmt(shrivel.label),
         },
+        personalized_feedback: data.personalized_feedback || null,
       };
-
       setResult(mapped);
-      // smooth-scroll to results for better UX
       setTimeout(() => {
         if (resultRef.current) resultRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
       }, 150);
       return;
     }
-
-    // Otherwise, assume data already matches shape
     setResult(data);
     setRawOutput(null);
   };
 
+  const feedback = result?.personalized_feedback;
+
   return (
-    <div className='min-h-screen bg-gradient-to-br from-green-50 to-amber-50 py-8 px-4'>
-      <div className='max-w-4xl mx-auto'>
-        <div className='bg-white rounded-2xl shadow-xl p-8'>
-          {/* Header */}
-          <div className='text-center mb-8'>
-            <h1 className='text-4xl font-bold text-emerald-800 mb-2'>
-              🌾 Seed Readiness Predictor
-            </h1>
-            <p className='text-gray-600'>
-              Upload a photo of your potato seeds to analyze their readiness for planting
-            </p>
-          </div>
+    <div className="seed-readiness-page">
+      <style>{`
+        .seed-readiness-page {
+          font-family: 'Outfit', 'Segoe UI', sans-serif;
+          --sr-green: #2d4a38;
+          --sr-green-soft: #5a8a6e;
+          --sr-green-bg: #f2f7f4;
+          --sr-card: #ffffff;
+          --sr-text: #1e2d24;
+          --sr-muted: #6b7f72;
+        }
+        .seed-readiness-page .sr-title {
+          font-family: 'Fraunces', Georgia, serif;
+          font-weight: 600;
+          color: var(--sr-green);
+        }
+        .seed-readiness-page .sr-card {
+          background: var(--sr-card);
+          border-radius: 12px;
+          box-shadow: 0 1px 3px rgba(0,0,0,.06);
+          border: 1px solid rgba(0,0,0,.06);
+        }
+      `}</style>
 
-          {/* Upload Section - uses centralized ImageUpload component */}
-          <div className='bg-emerald-50 p-6 rounded-xl mb-6'>
-            <h2 className='text-xl font-semibold text-emerald-800 mb-4'>
-              📸 Upload Seed Photo
-            </h2>
-            <ImageUpload onResult={handlePrediction} />
-          </div>
+      <div className="max-w-3xl mx-auto">
+        {/* Header — moderate */}
+        <header className="mb-6">
+          <h1 className="sr-title text-2xl md:text-3xl mb-1">
+            Seed Readiness Predictor
+          </h1>
+          <p className="text-[var(--sr-muted)] text-sm">
+            Upload a photo of your potato seed for analysis
+          </p>
+        </header>
 
-          {/* Results Section */}
-          {result && (
-            <div ref={resultRef} className='bg-gradient-to-br from-green-50 to-emerald-50 p-6 rounded-xl border-2 border-green-300 transition-all'>
-              <h2 className='text-2xl font-bold text-green-800 mb-4 flex items-center gap-2'>
-                ✅ Analysis Complete
-              </h2>
+        {/* Upload */}
+        <section className="sr-card p-5 mb-6">
+          <h2 className="text-base font-medium text-[var(--sr-green)] mb-3">
+            Upload seed photo
+          </h2>
+          <ImageUpload onResult={handlePrediction} />
+        </section>
 
-              {/* Raw model outputs: show all 4 model predictions */}
-              {rawOutput && (
-                <div className='grid grid-cols-1 md:grid-cols-4 gap-3 mb-4'>
+        {/* Results */}
+        {result && (
+          <div ref={resultRef} className="space-y-4">
+            {/* Feedback + Readiness in one card */}
+            <section className="sr-card p-5">
+              {feedback && (
+                <div className="mb-4 pb-4 border-b border-[var(--sr-green-bg)]">
+                  <h3 className="text-sm font-medium text-[var(--sr-green)] mb-2">Feedback</h3>
+                  <p className="text-[var(--sr-text)] text-sm leading-relaxed">
+                    {feedback.summary}
+                  </p>
+                  {feedback.size_note && (
+                    <p className="text-[var(--sr-muted)] text-xs mt-2">{feedback.size_note}</p>
+                  )}
+                  {feedback.action_items?.length > 0 && (
+                    <ul className="mt-2 space-y-1 text-sm text-[var(--sr-text)]">
+                      {feedback.action_items.map((item, i) => (
+                        <li key={i} className="flex gap-2">
+                          <span className="text-[var(--sr-green-soft)]">·</span>
+                          <span>{item}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              )}
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <span className="text-sm text-[var(--sr-muted)]">Readiness</span>
+                <span className="text-sm font-medium text-[var(--sr-green)] bg-[var(--sr-green-bg)] px-3 py-1 rounded-lg">
+                  {result.readiness}
+                </span>
+              </div>
+              <div className="flex items-center gap-2 mt-2">
+                <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
+                  <div
+                    className="h-full rounded-full bg-[var(--sr-green-soft)]/80 transition-all duration-400"
+                    style={{ width: `${Math.min(100, result.confidence)}%` }}
+                  />
+                </div>
+                <span className="text-xs text-[var(--sr-muted)] w-10 text-right">{result.confidence}%</span>
+              </div>
+            </section>
+
+            {/* Metrics — compact */}
+            {rawOutput && (
+              <section className="sr-card p-5">
+                <h3 className="text-sm font-medium text-[var(--sr-green)] mb-3">Quality metrics</h3>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                   {[
-                    ["seed_readiness", "Seed Readiness"],
-                    ["sprout_length", "Sprout Length"],
-                    ["shrivel_level", "Shrivel Level"],
-                    ["damage_level", "Damage Level"],
+                    ["seed_readiness", "Readiness"],
+                    ["sprout_length", "Sprout"],
+                    ["shrivel_level", "Shrivel"],
+                    ["damage_level", "Damage"],
                   ].map(([key, title]) => {
                     const val = rawOutput[key] || { label: "unknown", confidence: 0 };
-                    const labelText = String(val.label || "unknown").replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
                     const pct = Math.round((val.confidence || 0) * 100);
                     return (
-                      <div key={key} className='bg-white rounded-lg p-3 shadow-sm flex flex-col items-start'>
-                        <div className='text-xs text-gray-500'>{title}</div>
-                        <div className='mt-2 text-lg font-semibold text-emerald-700'>{labelText}</div>
-                        <div className='mt-1 text-sm text-gray-600'>{pct}% confidence</div>
+                      <div key={key} className="bg-[var(--sr-green-bg)]/60 rounded-lg px-3 py-2">
+                        <div className="text-xs text-[var(--sr-muted)]">{title}</div>
+                        <div className="text-sm font-medium text-[var(--sr-text)]">{fmt(val.label)}</div>
+                        <div className="text-xs text-[var(--sr-muted)]">{pct}%</div>
                       </div>
                     );
                   })}
                 </div>
-              )}
+              </section>
+            )}
 
-              {/* Readiness Status */}
-              <div className='bg-white rounded-lg p-4 mb-4 shadow-md'>
-                <div className='flex items-center justify-between mb-2'>
-                  <h3 className='text-lg font-semibold text-gray-800'>
-                    Readiness Status
-                  </h3>
-                  <span className='bg-green-100 text-green-800 font-bold px-4 py-1 rounded-full'>
-                    {result.readiness}
-                  </span>
-                </div>
-                <div className='flex items-center gap-2'>
-                  <div className='flex-1 bg-gray-200 rounded-full h-3'>
-                    <div
-                      className='bg-gradient-to-r from-green-500 to-emerald-500 h-3 rounded-full'
-                      style={{ width: `${result.confidence}%` }}
-                    ></div>
-                  </div>
-                  <span className='text-sm font-semibold text-gray-700'>
-                    {result.confidence}%
-                  </span>
-                </div>
-              </div>
-
-              {/* Quality Metrics */}
-              <div className='bg-white rounded-lg p-4 mb-4 shadow-md'>
-                <h3 className='text-lg font-semibold text-gray-800 mb-3'>
-                  Quality Metrics
-                </h3>
-                <div className='grid grid-cols-3 gap-3'>
-                  <div className='text-center'>
-                    <div className='text-2xl mb-1'>📏</div>
-                    <div className='text-xs text-gray-600'>Size</div>
-                    <div className='font-semibold text-emerald-700'>
-                      {result.quality.size}
-                    </div>
-                  </div>
-                  <div className='text-center'>
-                    <div className='text-2xl mb-1'>🎨</div>
-                    <div className='text-xs text-gray-600'>Color</div>
-                    <div className='font-semibold text-emerald-700'>
-                      {result.quality.color}
-                    </div>
-                  </div>
-                  <div className='text-center'>
-                    <div className='text-2xl mb-1'>✨</div>
-                    <div className='text-xs text-gray-600'>Texture</div>
-                    <div className='font-semibold text-emerald-700'>
-                      {result.quality.texture}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Recommendations */}
-              <div className='bg-white rounded-lg p-4 shadow-md'>
-                <h3 className='text-lg font-semibold text-gray-800 mb-3'>
-                  💡 Recommendations
-                </h3>
-                <ul className='space-y-2'>
-                  {result.recommendations.map((rec, index) => (
-                    <li
-                      key={index}
-                      className='flex items-start gap-2 text-gray-700'
-                    >
-                      <span className='text-green-600 font-bold'>•</span>
-                      <span className='text-sm'>{rec}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-          )}
-
-          {/* Info Cards */}
-          <div className='mt-6 grid grid-cols-1 md:grid-cols-3 gap-4'>
-            <div className='bg-blue-50 p-4 rounded-lg'>
-              <div className='text-2xl mb-2'>🎯</div>
-              <h3 className='font-semibold text-blue-800 mb-1'>Accuracy</h3>
-              <p className='text-xs text-gray-600'>
-                AI-powered analysis with 95%+ accuracy rate
-              </p>
-            </div>
-            <div className='bg-purple-50 p-4 rounded-lg'>
-              <div className='text-2xl mb-2'>⚡</div>
-              <h3 className='font-semibold text-purple-800 mb-1'>Fast Results</h3>
-              <p className='text-xs text-gray-600'>
-                Get instant feedback in seconds
-              </p>
-            </div>
-            <div className='bg-pink-50 p-4 rounded-lg'>
-              <div className='text-2xl mb-2'>📱</div>
-              <h3 className='font-semibold text-pink-800 mb-1'>Mobile Ready</h3>
-              <p className='text-xs text-gray-600'>
-                Works on any device, anywhere
-              </p>
-            </div>
+            {/* Recommendations — compact */}
+            <section className="sr-card p-5">
+              <h3 className="text-sm font-medium text-[var(--sr-green)] mb-2">Recommendations</h3>
+              <ul className="space-y-1.5 text-sm text-[var(--sr-text)]">
+                {result.recommendations.map((rec, i) => (
+                  <li key={i} className="flex gap-2">
+                    <span className="text-[var(--sr-green-soft)]">·</span>
+                    <span>{rec}</span>
+                  </li>
+                ))}
+              </ul>
+            </section>
           </div>
-        </div>
+        )}
+
+        {/* Single line footer — no 3 cards */}
+        {!result && (
+          <p className="text-center text-xs text-[var(--sr-muted)] mt-6">
+            AI-powered analysis · Results in seconds
+          </p>
+        )}
       </div>
     </div>
   );

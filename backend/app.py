@@ -6,6 +6,7 @@ import pickle
 import warnings
 from flask_cors import CORS
 from utils.predict import predict_one
+from feedback import generate_seed_readiness_feedback
 
 warnings.filterwarnings("ignore")
 
@@ -496,7 +497,12 @@ def predict():
 
     try:
         predictions = predict_one(file_path)
-        return jsonify(predictions)
+        try:
+            feedback = generate_seed_readiness_feedback(predictions)
+        except Exception:
+            feedback = None
+        out = {**predictions, "personalized_feedback": feedback}
+        return jsonify(out)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
     finally:
