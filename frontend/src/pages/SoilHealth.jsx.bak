@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { ref, onValue } from 'firebase/database';
-import { collection, addDoc, query, where, orderBy, limit, getDocs, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, query, orderBy, limit, getDocs, serverTimestamp } from 'firebase/firestore';
 import { realtimeDb, db } from '../firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine } from 'recharts';
@@ -19,8 +19,8 @@ const SLIDES = [
     img:      'https://images.pexels.com/photos/144248/potatoes-vegetables-erdfrucht-bio-144248.jpeg?auto=compress&cs=tinysrgb&w=1200&h=500&fit=crop',
     gradient: 'from-yellow-950 via-amber-950 to-stone-950',
     accent:   '#fbbf24',
-    tag:      '🥔  Potato Farming — Sri Lanka',
-    title:    'Smart Potato Farming in Sri Lanka',
+    tag:      '🥔  අල ගොවිතැන · Potato Farming — Sri Lanka',
+    title:    'ශ්‍රී ලංකාවේ අල ගොවිතැන',
     desc:     'Smart soil health monitoring built for potato farmers in Badulla District, Uva Province. Granola, Kondor & local variety cultivation — powered by AI and IoT.',
     stat:     '📍 Badulla · Uva Province · Sri Lanka',
   },
@@ -28,8 +28,8 @@ const SLIDES = [
     img:      'https://images.unsplash.com/photo-1624204386084-dd8b5c3cb875?auto=format&fit=crop&w=1200&q=85',
     gradient: 'from-green-950 via-lime-950 to-emerald-950',
     accent:   '#86efac',
-    tag:      '🌱  Potato Growth Stages · Maha & Yala Seasons',
-    title:    'From Seed Potato to Harvest',
+    tag:      '🌱  Potato Plant Growth · Maha & Yala Seasons',
+    title:    'බීජ අල සිට අස්වනු දක්වා',
     desc:     'Germination → Vegetative Growth → Tuber Initiation → Maturation. Soil nutrient requirements change at every stage — the system automatically adapts recommendations.',
     stat:     '4 Growth Stages · Maha (Oct–Feb) & Yala (Mar–Aug)',
   },
@@ -47,7 +47,7 @@ const SLIDES = [
     gradient: 'from-teal-950 via-emerald-950 to-cyan-950',
     accent:   '#2dd4bf',
     tag:      '🧪  Uva Highland Soil Requirements',
-    title:    'Optimal Soil for Highland Potatoes',
+    title:    'ඌව නිම්නයේ අල සඳහා මකුළු',
     desc:     'Optimal for Badulla highland potatoes (1000–2000 m AMSL): pH 5.5–6.5 · EC 0.05–0.16 mS/cm · Temp 15–22°C · Moisture 50–72%. Instant flag on any deviation.',
     stat:     '🌡️ Calibrated for Uva Highland Elevation',
   },
@@ -55,7 +55,7 @@ const SLIDES = [
     img:      'https://images.unsplash.com/photo-1580910051074-3eb694886505?auto=format&fit=crop&w=1200&q=85',
     gradient: 'from-purple-950 via-violet-950 to-indigo-950',
     accent:   '#c084fc',
-    tag:      '📊  Fertilizer · Reports · History',
+    tag:      '📊  Fertilizer · Reports · ඉතිහාසය',
     title:    'Recommendations, Trends & PDF Reports',
     desc:     'Exact per-acre Urea, TSP, MOP & Organic fertilizer quantities for your field size. Download professional PDF soil reports and track historical analysis trends.',
     stat:     'PDF Reports · Cloud Backup · Trend Charts',
@@ -113,305 +113,6 @@ const STATUS_DOT   = { ok: 'bg-green-500',                  warning: 'bg-yellow-
 const STATUS_LABEL = { ok: 'Normal',                        warning: 'Warning',                        critical: 'Critical',                   unknown: '--'                         };
 
 // ================================================================
-// STYLES — CSS-in-JS (matches Cost Analysis design system)
-// ================================================================
-const PAGE_CSS = `
-  @import url('https://fonts.googleapis.com/css2?family=Lora:wght@400;600;700&family=Inter:wght@300;400;500;600;700&display=swap');
-
-  .sh-page {
-    font-family: 'Inter', sans-serif;
-    position: relative;
-  }
-  .sh-page h1, .sh-page h2, .sh-page h3 {
-    font-family: 'Lora', serif;
-  }
-
-  /* ── Dot-grid background overlay ── */
-  .sh-page::before {
-    content: '';
-    position: fixed; inset: 0;
-    background-image: radial-gradient(circle, rgba(61,122,58,0.06) 1px, transparent 1px);
-    background-size: 24px 24px;
-    pointer-events: none; z-index: 0;
-  }
-
-  /* ── Section entrance animation ── */
-  @keyframes shFadeInUp {
-    from { opacity: 0; transform: translateY(28px); }
-    to   { opacity: 1; transform: translateY(0); }
-  }
-  .sh-section {
-    animation: shFadeInUp 0.65s cubic-bezier(0.22, 1, 0.36, 1) both;
-    position: relative; z-index: 1;
-  }
-  .sh-section:nth-child(2)  { animation-delay: 0.08s; }
-  .sh-section:nth-child(3)  { animation-delay: 0.16s; }
-  .sh-section:nth-child(4)  { animation-delay: 0.24s; }
-  .sh-section:nth-child(5)  { animation-delay: 0.32s; }
-  .sh-section:nth-child(6)  { animation-delay: 0.40s; }
-  .sh-section:nth-child(7)  { animation-delay: 0.48s; }
-  .sh-section:nth-child(8)  { animation-delay: 0.56s; }
-  .sh-section:nth-child(9)  { animation-delay: 0.64s; }
-  .sh-section:nth-child(10) { animation-delay: 0.72s; }
-
-  /* ── Card hover enhancement ── */
-  @keyframes shCardIn {
-    from { opacity: 0; transform: translateY(12px) scale(0.97); }
-    to   { opacity: 1; transform: translateY(0) scale(1); }
-  }
-  .sh-card-anim {
-    animation: shCardIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
-  }
-
-  /* ── Improved loading spinner ── */
-  @keyframes shSpinGlow {
-    0%   { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-  }
-  @keyframes shPulseText {
-    0%, 100% { opacity: 1; }
-    50%      { opacity: 0.5; }
-  }
-  .sh-spinner {
-    width: 44px; height: 44px;
-    border: 3.5px solid #e8e3d8;
-    border-top-color: #3d7a3a;
-    border-radius: 50%;
-    animation: shSpinGlow 0.9s linear infinite;
-  }
-  .sh-loading-text {
-    color: #6b8069;
-    font-size: 14px;
-    font-weight: 500;
-    animation: shPulseText 1.8s ease-in-out infinite;
-  }
-
-  /* ── Hero banner glow ── */
-  .sh-hero {
-    background: linear-gradient(108deg, #1a3018 0%, #2d5a2a 35%, #3d7a3a 65%, #5a9e56 100%);
-    position: relative;
-    overflow: hidden;
-  }
-  .sh-hero::after {
-    content: '';
-    position: absolute; right: -40px; bottom: -60px;
-    width: 240px; height: 240px; border-radius: 50%;
-    background: rgba(255,255,255,0.04);
-  }
-
-  /* ── Tab bar ── */
-  .sh-tabs {
-    background: linear-gradient(135deg, #f0ede6, #f8f4ec);
-    border-radius: 16px;
-    padding: 6px;
-    display: flex; gap: 4px;
-    border: 1px solid #e3d9c2;
-  }
-  .sh-tab {
-    flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px;
-    padding: 10px 16px;
-    border-radius: 12px;
-    font-size: 14px; font-weight: 600;
-    white-space: nowrap;
-    cursor: pointer; border: none; background: transparent;
-    color: #6b8069;
-    transition: all 0.25s ease;
-  }
-  .sh-tab:hover { color: #3d7a3a; background: rgba(61,122,58,0.06); }
-  .sh-tab-active {
-    background: #3d7a3a !important;
-    color: white !important;
-    box-shadow: 0 2px 10px rgba(61,122,58,0.35);
-  }
-
-  /* ── Predict button ── */
-  .sh-btn-predict {
-    width: 100%;
-    padding: 16px 0;
-    border-radius: 16px;
-    background: linear-gradient(135deg, #2d5a2a 0%, #3d7a3a 40%, #5a9e56 100%);
-    color: white; font-weight: 700; font-size: 16px;
-    border: none; cursor: pointer;
-    display: flex; align-items: center; justify-content: center; gap: 12px;
-    transition: all 0.3s ease;
-    box-shadow: 0 4px 20px rgba(61,122,58,0.3);
-    font-family: 'Inter', sans-serif;
-  }
-  .sh-btn-predict:hover:not(:disabled) {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 28px rgba(61,122,58,0.4);
-  }
-  .sh-btn-predict:disabled { opacity: 0.5; cursor: not-allowed; }
-
-  /* ── White content card ── */
-  .sh-content-card {
-    background: #fff;
-    border-radius: 18px;
-    border: 1px solid #e8e3d8;
-    padding: 24px;
-    box-shadow: 0 1px 4px rgba(30,45,30,0.05);
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
-  }
-  .sh-content-card:hover {
-    box-shadow: 0 6px 20px rgba(30,45,30,0.09);
-  }
-
-  /* ── Section header with green accent line ── */
-  .sh-sec-head {
-    display: flex; align-items: center; gap: 12px; margin-bottom: 4px;
-  }
-  .sh-sec-icon {
-    width: 40px; height: 40px;
-    border-radius: 12px;
-    background: linear-gradient(135deg, #e8f5e8, #d4edda);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 20px;
-    flex-shrink: 0;
-  }
-  .sh-sec-line {
-    height: 3px;
-    width: 48px;
-    border-radius: 3px;
-    background: linear-gradient(90deg, #3d7a3a, #a8d5a2);
-    margin-top: 8px;
-  }
-
-  /* ── Alert banner ── */
-  .sh-alert {
-    border-radius: 16px;
-    border: 1px solid #fca5a5;
-    background: linear-gradient(135deg, #fef2f2, #fff5f5);
-    padding: 16px 20px;
-    display: flex; gap: 12px; align-items: flex-start;
-    animation: shFadeInUp 0.5s ease both;
-  }
-
-  /* ── Slideshow overlay text animation ── */
-  @keyframes shSlideContent {
-    from { opacity: 0; transform: translateY(12px); }
-    to   { opacity: 1; transform: translateY(0); }
-  }
-  .sh-slide-content {
-    animation: shSlideContent 0.6s ease both;
-    animation-delay: 0.2s;
-  }
-
-  /* ── Gauge card stagger ── */
-  .sh-gauge-grid > *:nth-child(1) { animation-delay: 0.05s; }
-  .sh-gauge-grid > *:nth-child(2) { animation-delay: 0.10s; }
-  .sh-gauge-grid > *:nth-child(3) { animation-delay: 0.15s; }
-  .sh-gauge-grid > *:nth-child(4) { animation-delay: 0.20s; }
-  .sh-gauge-grid > *:nth-child(5) { animation-delay: 0.25s; }
-  .sh-gauge-grid > *:nth-child(6) { animation-delay: 0.30s; }
-  .sh-gauge-grid > *:nth-child(7) { animation-delay: 0.35s; }
-
-  /* ── Result banner glow ── */
-  @keyframes shResultPulse {
-    0%, 100% { box-shadow: 0 0 0 0 rgba(61,122,58,0.2); }
-    50%      { box-shadow: 0 0 0 8px rgba(61,122,58,0); }
-  }
-  .sh-result-banner {
-    animation: shResultPulse 2s ease-in-out 1;
-  }
-
-  /* ── Success popup overlay ── */
-  @keyframes shPopupOverlay {
-    from { opacity: 0; }
-    to   { opacity: 1; }
-  }
-  @keyframes shPopupCard {
-    0%   { opacity: 0; transform: translateY(40px) scale(0.9); }
-    60%  { transform: translateY(-8px) scale(1.02); }
-    100% { opacity: 1; transform: translateY(0) scale(1); }
-  }
-  @keyframes shPopupRing {
-    0%   { transform: scale(0); opacity: 0; }
-    50%  { transform: scale(1.2); opacity: 1; }
-    100% { transform: scale(1); opacity: 1; }
-  }
-  @keyframes shPopupCheck {
-    0%   { stroke-dashoffset: 40; }
-    100% { stroke-dashoffset: 0; }
-  }
-  @keyframes shConfetti {
-    0%   { transform: translateY(0) rotate(0deg); opacity: 1; }
-    100% { transform: translateY(-80px) rotate(360deg); opacity: 0; }
-  }
-  .sh-popup-overlay {
-    position: fixed; inset: 0; z-index: 9999;
-    background: rgba(0,0,0,0.45);
-    backdrop-filter: blur(6px);
-    display: flex; align-items: center; justify-content: center;
-    animation: shPopupOverlay 0.3s ease both;
-  }
-  .sh-popup-card {
-    background: white;
-    border-radius: 24px;
-    padding: 40px 36px 32px;
-    max-width: 420px; width: 90%;
-    text-align: center;
-    box-shadow: 0 24px 64px rgba(0,0,0,0.2);
-    animation: shPopupCard 0.5s cubic-bezier(0.22,1,0.36,1) both;
-    position: relative; overflow: hidden;
-  }
-  .sh-popup-card::before {
-    content: '';
-    position: absolute; top: 0; left: 0; right: 0; height: 4px;
-    background: linear-gradient(90deg, #3d7a3a, #5a9e56, #a8d5a2, #5a9e56, #3d7a3a);
-    background-size: 200% 100%;
-    animation: shPopupBar 2s linear infinite;
-  }
-  @keyframes shPopupBar {
-    0%   { background-position: 0% 0%; }
-    100% { background-position: 200% 0%; }
-  }
-  .sh-popup-icon-ring {
-    width: 80px; height: 80px; margin: 0 auto 20px;
-    border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    animation: shPopupRing 0.6s cubic-bezier(0.22,1,0.36,1) both;
-    animation-delay: 0.2s;
-  }
-  .sh-popup-icon-ring svg {
-    stroke-dasharray: 40;
-    stroke-dashoffset: 40;
-    animation: shPopupCheck 0.5s ease both;
-    animation-delay: 0.5s;
-  }
-  .sh-popup-confetti {
-    position: absolute; top: 50%; left: 50%;
-    width: 8px; height: 8px; border-radius: 2px;
-    animation: shConfetti 1s ease-out both;
-  }
-  .sh-popup-btn {
-    display: inline-flex; align-items: center; gap: 8px;
-    padding: 12px 28px;
-    border-radius: 14px;
-    font-weight: 700; font-size: 14px;
-    cursor: pointer; border: none;
-    transition: all 0.25s ease;
-    font-family: 'Inter', sans-serif;
-  }
-  .sh-popup-btn-primary {
-    background: linear-gradient(135deg, #2d5a2a, #3d7a3a, #5a9e56);
-    color: white;
-    box-shadow: 0 4px 16px rgba(61,122,58,0.3);
-  }
-  .sh-popup-btn-primary:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 24px rgba(61,122,58,0.4);
-  }
-  .sh-popup-btn-ghost {
-    background: transparent;
-    color: #3d7a3a;
-    border: 2px solid #d4edda;
-  }
-  .sh-popup-btn-ghost:hover {
-    background: #f0faf0;
-  }
-`;
-
-// ================================================================
 // MAIN COMPONENT
 // ================================================================
 export default function SoilHealth() {
@@ -427,7 +128,6 @@ export default function SoilHealth() {
   const [predicting,   setPredicting]   = useState(false);
   const [prediction,   setPrediction]   = useState(null);
   const [predError,    setPredError]    = useState(null);
-  const [showPopup,    setShowPopup]    = useState(false);
 
   const [manualForm, setManualForm] = useState({
     pH: '', EC: '', N: '', P: '', K: '', Temperature: '', Moisture: '',
@@ -491,23 +191,20 @@ export default function SoilHealth() {
   // Firestore — load prediction history
   // ----------------------------------------------------------------
   const loadHistory = useCallback(async () => {
-    if (!currentUser) { setHistoryLoading(false); return; }
+    if (!currentUser) return;
     setHistoryLoading(true);
     try {
       const q = query(
         collection(db, 'soil_predictions'),
-        where('uid', '==', currentUser.uid),
         orderBy('timestamp', 'desc'),
         limit(20),
       );
-      const timeout = new Promise((_, rej) => setTimeout(() => rej(new Error('History load timeout')), 10000));
-      const snap = await Promise.race([getDocs(q), timeout]);
+      const snap = await getDocs(q);
       setHistory(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
     } catch (e) {
       console.error('History load failed:', e);
-    } finally {
-      setHistoryLoading(false);
     }
+    setHistoryLoading(false);
   }, [currentUser]);
 
   useEffect(() => {
@@ -549,9 +246,7 @@ export default function SoilHealth() {
       } else {
         setPrediction(data);
         setPredInputs(payload);
-        setShowPopup(true);
-        // Save to Firestore in background — don't block UI
-        savePrediction(payload, data).catch(e => console.error('Save failed:', e));
+        await savePrediction(payload, data);
       }
     } catch {
       setPredError('Cannot connect to backend. Make sure the Flask server is running on port 5000.');
@@ -561,26 +256,20 @@ export default function SoilHealth() {
   const handlePredictLive = async () => {
     if (!liveData) return;
     setPredicting(true); setPrediction(null); setPredError(null);
-    try {
-      await runPrediction({ ...liveData, Growth_Stage: growthStage });
-    } finally {
-      setPredicting(false);
-    }
+    await runPrediction({ ...liveData, Growth_Stage: growthStage });
+    setPredicting(false);
   };
 
   const handlePredictManual = async (e) => {
     e.preventDefault();
     setPredicting(true); setPrediction(null); setPredError(null);
-    try {
-      await runPrediction({
-        pH: parseFloat(manualForm.pH), EC: parseFloat(manualForm.EC),
-        N: parseFloat(manualForm.N),   P: parseFloat(manualForm.P),
-        K: parseFloat(manualForm.K),   Temperature: parseFloat(manualForm.Temperature),
-        Moisture: parseFloat(manualForm.Moisture), Growth_Stage: growthStage,
-      });
-    } finally {
-      setPredicting(false);
-    }
+    await runPrediction({
+      pH: parseFloat(manualForm.pH), EC: parseFloat(manualForm.EC),
+      N: parseFloat(manualForm.N),   P: parseFloat(manualForm.P),
+      K: parseFloat(manualForm.K),   Temperature: parseFloat(manualForm.Temperature),
+      Moisture: parseFloat(manualForm.Moisture), Growth_Stage: growthStage,
+    });
+    setPredicting(false);
   };
 
   // ----------------------------------------------------------------
@@ -944,7 +633,7 @@ export default function SoilHealth() {
     };
     const sc = SC[status] || SC.unknown;
     return (
-      <div className={`sh-card-anim rounded-2xl border-2 p-4 flex flex-col gap-2 transition-all duration-300 hover:shadow-md hover:-translate-y-0.5 ${sc.ring}`}>
+      <div className={`rounded-2xl border-2 p-4 flex flex-col gap-2 transition-all duration-300 hover:shadow-md hover:-translate-y-0.5 ${sc.ring}`}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="text-xl">{meta.icon || '📊'}</span>
@@ -1006,100 +695,7 @@ export default function SoilHealth() {
   // RENDER
   // ----------------------------------------------------------------
   return (
-    <>
-    <style>{PAGE_CSS}</style>
-
-    {/* ── Success Popup Overlay ── */}
-    {showPopup && prediction && (() => {
-      const popColors = {
-        green:  { bg: '#ecfdf5', ring: '#22c55e', title: 'Excellent Soil!', subtitle: 'Your soil is well-suited for potato cultivation.' },
-        orange: { bg: '#fffbeb', ring: '#f59e0b', title: 'Moderate Soil', subtitle: 'Your soil needs some adjustments for best yield.' },
-        red:    { bg: '#fef2f2', ring: '#ef4444', title: 'Soil Needs Attention', subtitle: 'Significant improvements are recommended.' },
-      };
-      const pc = popColors[prediction.soil_suitability?.color] || popColors.red;
-      const confettiColors = ['#3d7a3a','#5a9e56','#fbbf24','#38bdf8','#c084fc','#f97316','#ec4899'];
-      return (
-        <div className="sh-popup-overlay" onClick={() => setShowPopup(false)}>
-          <div className="sh-popup-card" onClick={e => e.stopPropagation()}>
-            {/* Confetti particles */}
-            {prediction.soil_suitability?.color === 'green' && confettiColors.map((c, i) => (
-              <div
-                key={i}
-                className="sh-popup-confetti"
-                style={{
-                  background: c,
-                  left: `${20 + i * 10}%`,
-                  animationDelay: `${0.3 + i * 0.08}s`,
-                  animationDuration: `${0.8 + Math.random() * 0.5}s`,
-                }}
-              />
-            ))}
-
-            {/* Icon ring */}
-            <div className="sh-popup-icon-ring" style={{ background: pc.bg, border: `3px solid ${pc.ring}` }}>
-              {prediction.soil_suitability?.color === 'green' && (
-                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke={pc.ring} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="20 6 9 17 4 12" />
-                </svg>
-              )}
-              {prediction.soil_suitability?.color === 'orange' && (
-                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke={pc.ring} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M12 9v4" /><circle cx="12" cy="17" r="0.5" fill={pc.ring} />
-                  <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
-                </svg>
-              )}
-              {prediction.soil_suitability?.color === 'red' && (
-                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke={pc.ring} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
-                </svg>
-              )}
-            </div>
-
-            <h3 style={{ fontFamily: 'Lora, serif', fontSize: '22px', fontWeight: 700, color: '#1e2d1e', marginBottom: '6px' }}>
-              {pc.title}
-            </h3>
-            <p style={{ fontSize: '14px', color: '#6b8069', marginBottom: '6px', lineHeight: 1.5 }}>
-              {pc.subtitle}
-            </p>
-
-            {/* Suitability label + confidence */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', margin: '14px 0 8px', flexWrap: 'wrap' }}>
-              <span style={{
-                background: pc.ring, color: 'white', padding: '6px 18px',
-                borderRadius: '999px', fontSize: '13px', fontWeight: 700,
-              }}>
-                {prediction.soil_suitability?.label}
-              </span>
-              {prediction.confidence != null && (
-                <span style={{
-                  background: pc.bg, color: pc.ring, padding: '6px 14px',
-                  borderRadius: '999px', fontSize: '13px', fontWeight: 700,
-                  border: `1.5px solid ${pc.ring}`,
-                }}>
-                  🎯 {prediction.confidence}% confident
-                </span>
-              )}
-            </div>
-
-            <p style={{ fontSize: '12px', color: '#9ca3af', margin: '12px 0 20px' }}>
-              Scroll down to see full results, fertilizer recommendations & corrective actions.
-            </p>
-
-            {/* Action buttons */}
-            <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', flexWrap: 'wrap' }}>
-              <button className="sh-popup-btn sh-popup-btn-primary" onClick={() => { setShowPopup(false); setTimeout(() => document.querySelector('.sh-result-banner')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100); }}>
-                📊 View Full Results
-              </button>
-              <button className="sh-popup-btn sh-popup-btn-ghost" onClick={() => { setShowPopup(false); setPrediction(null); setPredError(null); setPredInputs(null); }}>
-                🔄 New Analysis
-              </button>
-            </div>
-          </div>
-        </div>
-      );
-    })()}
-
-    <div className="sh-page max-w-5xl mx-auto space-y-6 pb-10">
+    <div className="max-w-5xl mx-auto space-y-6 pb-10">
 
       {/* ============================================================
           IMAGE SLIDESHOW
@@ -1108,7 +704,7 @@ export default function SoilHealth() {
         const slide = SLIDES[slideIdx];
         const hasErr = imgErrors[slideIdx];
         return (
-          <div className="sh-section relative overflow-hidden rounded-2xl shadow-2xl" style={{ height: '300px' }}>
+          <div className="relative overflow-hidden rounded-2xl shadow-2xl" style={{ height: '285px' }}>
 
             {/* Base dark bg + subtle dot pattern */}
             <div className="absolute inset-0 bg-gray-950" />
@@ -1137,7 +733,7 @@ export default function SoilHealth() {
             <div className="absolute top-0 left-0 right-0 h-0.5" style={{ background: `linear-gradient(to right, transparent, ${slide.accent}, transparent)` }} />
 
             {/* Content */}
-            <div className={`sh-slide-content relative h-full flex flex-col justify-end px-7 pb-11 transition-all duration-500 ${slideAnim ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-3'}`}>
+            <div className={`relative h-full flex flex-col justify-end px-7 pb-11 transition-all duration-500 ${slideAnim ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-3'}`}>
               <span
                 className="inline-flex items-center text-xs font-bold px-3 py-1 rounded-full mb-2.5 w-fit backdrop-blur-sm"
                 style={{ background: `${slide.accent}22`, color: slide.accent, border: `1px solid ${slide.accent}55` }}
@@ -1194,7 +790,7 @@ export default function SoilHealth() {
       {/* ============================================================
           HERO HEADER
           ============================================================ */}
-      <div className="sh-section sh-hero relative overflow-hidden rounded-2xl text-white p-6 shadow-lg">
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-green-700 via-green-600 to-emerald-500 text-white p-6 shadow-lg">
         <div className="absolute -top-8 -right-8 w-40 h-40 bg-white/10 rounded-full" />
         <div className="absolute -bottom-10 -left-6 w-32 h-32 bg-white/5 rounded-full" />
         <div className="relative flex items-start justify-between flex-wrap gap-4">
@@ -1255,7 +851,7 @@ export default function SoilHealth() {
           ALERT BANNER
           ============================================================ */}
       {liveStatus === 'live' && outOfRangeAlerts.length > 0 && (
-        <div className="sh-section sh-alert">
+        <div className="rounded-2xl border border-red-300 bg-red-50 p-4 flex gap-3 items-start">
           <div className="text-2xl flex-shrink-0 mt-0.5">🚨</div>
           <div>
             <p className="text-sm font-bold text-red-700 mb-2">
@@ -1283,13 +879,15 @@ export default function SoilHealth() {
       {/* ============================================================
           TABS
           ============================================================ */}
-      <div className="sh-section sh-tabs overflow-x-auto">
+      <div className="flex gap-1 bg-gray-100 rounded-2xl p-1.5 overflow-x-auto">
         {TABS.map((tab) => (
           <button
             key={tab.key}
             onClick={() => { setActiveTab(tab.key); setPrediction(null); setPredError(null); }}
-            className={`sh-tab ${
-              activeTab === tab.key ? 'sh-tab-active' : ''
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap transition-all duration-200 flex-1 justify-center ${
+              activeTab === tab.key
+                ? 'bg-white text-green-700 shadow-sm'
+                : 'text-gray-500 hover:text-gray-700'
             }`}
           >
             <span>{tab.icon}</span>
@@ -1302,7 +900,7 @@ export default function SoilHealth() {
           TAB 1 — LIVE SENSOR DATA
           ============================================================ */}
       {activeTab === 'live' && (
-        <div className="sh-section space-y-5">
+        <div className="space-y-5">
 
           {/* Connection status (only shown when not live) */}
           {liveStatus !== 'live' && (
@@ -1321,15 +919,10 @@ export default function SoilHealth() {
 
           {/* Gauge cards */}
           <div>
-            <div className="sh-sec-head">
-              <div className="sh-sec-icon">📡</div>
-              <div>
-                <p className="text-sm font-bold text-gray-700">Real-Time Sensor Readings</p>
-                <div className="sh-sec-line" />
-              </div>
-            </div>
-            <p className="text-xs text-gray-500 mb-3 ml-14">Live data from your field IoT sensors — refreshed every few seconds.</p>
-            <div className="sh-gauge-grid grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+              <span>📡</span> Real-Time Sensor Readings
+            </p>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
               <GaugeCard label="Soil pH"           value={liveData?.pH}              unit=""       paramKey="pH"          optimal="5.5 – 6.5" />
               <GaugeCard label="Conductivity (EC)" value={liveData?.EC != null ? Number(liveData.EC).toFixed(3) : null}  unit="mS/cm"  paramKey="EC"          optimal="0.05 – 0.16" />
               <GaugeCard label="Nitrogen (N)"      value={liveData?.N}               unit="ppm"    paramKey="N"           optimal="Stage-based" />
@@ -1341,13 +934,10 @@ export default function SoilHealth() {
           </div>
 
           {/* Growth stage selector */}
-          <div className="sh-content-card">
-            <div className="sh-sec-head">
-              <div className="sh-sec-icon">🌱</div>
-              <div>
-                <h2 className="text-sm font-bold text-gray-800">Select Your Crop Growth Stage</h2>
-                <div className="sh-sec-line" />
-              </div>
+          <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-xl">🌱</span>
+              <h2 className="text-sm font-bold text-gray-800">Select Your Crop Growth Stage</h2>
             </div>
             <p className="text-xs text-gray-500 mb-4 ml-8">
               IoT sensors cannot detect the crop stage — please select based on your current field conditions.
@@ -1374,13 +964,10 @@ export default function SoilHealth() {
           </div>
 
           {/* Land area input */}
-          <div className="sh-content-card">
-            <div className="sh-sec-head">
-              <div className="sh-sec-icon">🌾</div>
-              <div>
-                <h2 className="text-sm font-bold text-gray-800">Your Field Size</h2>
-                <div className="sh-sec-line" />
-              </div>
+          <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-xl">🌾</span>
+              <h2 className="text-sm font-bold text-gray-800">Your Field Size</h2>
             </div>
             <p className="text-xs text-gray-500 mb-3 ml-8">
               Enter your land area to calculate the <strong>total fertilizer</strong> needed for your entire field.
@@ -1406,7 +993,7 @@ export default function SoilHealth() {
           <button
             onClick={handlePredictLive}
             disabled={!liveData || liveStatus !== 'live' || predicting}
-            className="sh-btn-predict"
+            className="w-full py-4 rounded-2xl bg-gradient-to-r from-green-600 to-emerald-500 text-white font-bold text-base hover:from-green-700 hover:to-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-lg shadow-green-200 hover:shadow-xl hover:-translate-y-0.5 flex items-center justify-center gap-3"
           >
             {predicting ? (
               <>
@@ -1427,15 +1014,12 @@ export default function SoilHealth() {
           TAB 2 — MANUAL INPUT
           ============================================================ */}
       {activeTab === 'manual' && (
-        <form onSubmit={handlePredictManual} className="sh-section space-y-5">
+        <form onSubmit={handlePredictManual} className="space-y-5">
 
-          <div className="sh-content-card">
-            <div className="sh-sec-head">
-              <div className="sh-sec-icon">✏️</div>
-              <div>
-                <h2 className="text-sm font-bold text-gray-800">Enter Soil Parameters Manually</h2>
-                <div className="sh-sec-line" />
-              </div>
+          <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-xl">✏️</span>
+              <h2 className="text-sm font-bold text-gray-800">Enter Soil Parameters Manually</h2>
             </div>
             <p className="text-xs text-gray-500 mb-5 ml-8">
               Use these fields if sensor data is unavailable. EC (Electrical Conductivity) is the same as soil conductivity — enter in mS/cm.
@@ -1468,13 +1052,10 @@ export default function SoilHealth() {
             </div>
           </div>
 
-          <div className="sh-content-card">
-            <div className="sh-sec-head mb-3">
-              <div className="sh-sec-icon">🌱</div>
-              <div>
-                <h2 className="text-sm font-bold text-gray-800">Select Growth Stage</h2>
-                <div className="sh-sec-line" />
-              </div>
+          <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
+            <div className="flex items-center gap-2 mb-3">
+              <span className="text-xl">🌱</span>
+              <h2 className="text-sm font-bold text-gray-800">Select Growth Stage</h2>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {GROWTH_STAGES.map((s, idx) => (
@@ -1497,18 +1078,15 @@ export default function SoilHealth() {
             </div>
           </div>
 
-          <div className="sh-content-card">
-            <div className="sh-sec-head">
-              <div className="sh-sec-icon">🌾</div>
-              <div>
-                <h2 className="text-sm font-bold text-gray-800">Your Field Size</h2>
-                <div className="sh-sec-line" />
-              </div>
+          <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-xl">🌾</span>
+              <h2 className="text-sm font-bold text-gray-800">Your Field Size</h2>
             </div>
-            <p className="text-xs text-gray-500 mb-3 ml-14">
+            <p className="text-xs text-gray-500 mb-3 ml-8">
               Enter your land area to calculate <strong>total fertilizer</strong> needed for your entire field.
             </p>
-            <div className="flex items-center gap-3 ml-14">
+            <div className="flex items-center gap-3 ml-8">
               <div className="relative">
                 <input
                   type="number" min="0.1" step="0.1" placeholder="e.g. 2.5"
@@ -1528,7 +1106,7 @@ export default function SoilHealth() {
 
           <button
             type="submit" disabled={predicting}
-            className="sh-btn-predict"
+            className="w-full py-4 rounded-2xl bg-gradient-to-r from-green-600 to-emerald-500 text-white font-bold text-base hover:from-green-700 hover:to-emerald-600 disabled:opacity-50 transition-all duration-200 shadow-lg shadow-green-200 hover:shadow-xl hover:-translate-y-0.5 flex items-center justify-center gap-3"
           >
             {predicting ? (
               <>
@@ -1549,17 +1127,14 @@ export default function SoilHealth() {
           TAB 3 — PREDICTION HISTORY
           ============================================================ */}
       {activeTab === 'history' && (
-        <div className="sh-section space-y-4">
+        <div className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <div className="sh-sec-head">
-                <div className="sh-sec-icon">📋</div>
-                <div>
-                  <h2 className="text-sm font-bold text-gray-800">Recent Predictions</h2>
-                  <div className="sh-sec-line" />
-                </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xl">📋</span>
+                <h2 className="text-sm font-bold text-gray-800">Recent Predictions</h2>
               </div>
-              <p className="text-xs text-gray-500 mt-1 ml-14">Last 20 analyses saved to your account</p>
+              <p className="text-xs text-gray-500 mt-0.5 ml-8">Last 20 analyses saved to your account</p>
             </div>
             <button
               onClick={loadHistory}
@@ -1570,9 +1145,9 @@ export default function SoilHealth() {
           </div>
 
           {historyLoading && (
-            <div className="text-center py-14 flex flex-col items-center gap-3">
-              <div className="sh-spinner" />
-              <span className="sh-loading-text">Loading prediction history...</span>
+            <div className="text-center py-14 text-sm text-gray-400 flex flex-col items-center gap-3">
+              <span className="w-8 h-8 rounded-full border-2 border-green-500 border-t-transparent animate-spin" />
+              Loading history...
             </div>
           )}
 
@@ -1643,15 +1218,14 @@ export default function SoilHealth() {
           TAB 4 — TRENDS CHART
           ============================================================ */}
       {activeTab === 'trends' && (
-        <div className="sh-section space-y-5">
-          <div className="sh-sec-head">
-            <div className="sh-sec-icon">📈</div>
+        <div className="space-y-5">
+          <div className="flex items-center gap-2">
+            <span className="text-xl">📈</span>
             <div>
               <h2 className="text-sm font-bold text-gray-800">Parameter Trend Over Time</h2>
               <p className="text-xs text-gray-500 mt-0.5">
                 Historical values from your last {history.length} prediction{history.length !== 1 ? 's' : ''}.
               </p>
-              <div className="sh-sec-line" />
             </div>
           </div>
 
@@ -1680,8 +1254,8 @@ export default function SoilHealth() {
 
           {historyLoading && (
             <div className="text-center py-14 flex flex-col items-center gap-3">
-              <div className="sh-spinner" />
-              <span className="sh-loading-text">Loading trend data...</span>
+              <span className="w-8 h-8 rounded-full border-2 border-green-500 border-t-transparent animate-spin" />
+              <p className="text-sm text-gray-400">Loading trend data...</p>
             </div>
           )}
 
@@ -1707,7 +1281,7 @@ export default function SoilHealth() {
             const lo = PARAM_RANGES[trendParam]?.lo;
             const hi = PARAM_RANGES[trendParam]?.hi;
             return (
-              <div className="sh-content-card">
+              <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
                 <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">{trendParam} over time</p>
                 <ResponsiveContainer width="100%" height={280}>
                   <LineChart data={chartData} margin={{ top: 5, right: 20, left: 0, bottom: 60 }}>
@@ -1736,7 +1310,7 @@ export default function SoilHealth() {
           PREDICTION ERROR
           ============================================================ */}
       {predError && (
-        <div className="sh-section bg-red-50 border border-red-300 text-red-700 text-sm rounded-2xl p-4 flex items-start gap-3">
+        <div className="bg-red-50 border border-red-300 text-red-700 text-sm rounded-2xl p-4 flex items-start gap-3">
           <span className="text-xl flex-shrink-0">❌</span>
           <div>
             <p className="font-bold mb-0.5">Analysis Error</p>
@@ -1749,7 +1323,7 @@ export default function SoilHealth() {
           PREDICTION RESULTS
           ============================================================ */}
       {prediction && (
-        <div className="sh-section sh-result-banner space-y-4">
+        <div className="space-y-4">
 
           {/* Suitability banner */}
           {(() => {
@@ -1799,13 +1373,10 @@ export default function SoilHealth() {
           })()}
 
           {/* NPK Status */}
-          <div className="sh-content-card">
-            <div className="sh-sec-head mb-4">
-              <div className="sh-sec-icon">🌱</div>
-              <div>
-                <h3 className="text-sm font-bold text-gray-800">NPK Nutrient Status</h3>
-                <div className="sh-sec-line" />
-              </div>
+          <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
+            <div className="flex items-center gap-2 mb-4">
+              <span className="text-xl">🌱</span>
+              <h3 className="text-sm font-bold text-gray-800">NPK Nutrient Status</h3>
             </div>
             <div className="grid grid-cols-3 gap-4">
               {[
@@ -1833,14 +1404,11 @@ export default function SoilHealth() {
               { key: 'organic', label: 'Organic', desc: 'Organic fertilizer',     icon: '🌱', gradient: 'from-green-50 to-emerald-50', border: 'border-green-200',  num: 'text-green-700'  },
             ];
             return (
-              <div className="sh-content-card">
+              <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
                 <div className="flex items-center justify-between mb-4">
-                  <div className="sh-sec-head">
-                    <div className="sh-sec-icon">🧪</div>
-                    <div>
-                      <h3 className="text-sm font-bold text-gray-800">Fertilizer Recommendations</h3>
-                      <div className="sh-sec-line" />
-                    </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xl">🧪</span>
+                    <h3 className="text-sm font-bold text-gray-800">Fertilizer Recommendations</h3>
                   </div>
                   {hasAcres && (
                     <span className="flex items-center gap-1.5 text-xs bg-green-100 text-green-700 font-bold px-3 py-1.5 rounded-full border border-green-200">
@@ -1887,13 +1455,10 @@ export default function SoilHealth() {
           })()}
 
           {/* Corrective Actions */}
-          <div className="sh-content-card">
-            <div className="sh-sec-head mb-4">
-              <div className="sh-sec-icon">🔧</div>
-              <div>
-                <h3 className="text-sm font-bold text-gray-800">Corrective Actions</h3>
-                <div className="sh-sec-line" />
-              </div>
+          <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
+            <div className="flex items-center gap-2 mb-4">
+              <span className="text-xl">🔧</span>
+              <h3 className="text-sm font-bold text-gray-800">Corrective Actions</h3>
             </div>
             <div className="space-y-2.5">
               {prediction.corrective_actions.map((action, i) => (
@@ -1912,35 +1477,5 @@ export default function SoilHealth() {
       )}
 
     </div>
-
-    {/* ── Floating "New Analysis" bar when results are visible ── */}
-    {prediction && !showPopup && (
-      <div style={{
-        position: 'fixed', bottom: '24px', left: '50%', transform: 'translateX(-50%)',
-        zIndex: 999, display: 'flex', gap: '10px', alignItems: 'center',
-        background: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(12px)',
-        borderRadius: '16px', padding: '10px 20px',
-        boxShadow: '0 8px 32px rgba(30,45,30,0.18), 0 1px 4px rgba(30,45,30,0.08)',
-        border: '1px solid #e3d9c2',
-        animation: 'shFadeInUp 0.4s ease both',
-      }}>
-        <span style={{ fontSize: '13px', fontWeight: 600, color: '#3b4f3a', fontFamily: 'Inter, sans-serif' }}>✅ Analysis complete</span>
-        <button
-          className="sh-popup-btn sh-popup-btn-ghost"
-          style={{ padding: '8px 18px', fontSize: '13px' }}
-          onClick={() => { setPrediction(null); setPredError(null); setPredInputs(null); }}
-        >
-          🔄 Run New Analysis
-        </button>
-        <button
-          className="sh-popup-btn sh-popup-btn-primary"
-          style={{ padding: '8px 18px', fontSize: '13px' }}
-          onClick={() => document.querySelector('.sh-result-banner')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
-        >
-          📊 View Results
-        </button>
-      </div>
-    )}
-    </>
   );
 }
