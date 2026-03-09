@@ -183,26 +183,28 @@ function DiseaseVizPanel({ viz, predicted }) {
 }
 
 // ── Severity colour stops for the gauge arc ──────────────────────────────────
-function getGaugeColor(confidence, predicted) {
+function getGaugeColor(diseaseAreaPct, predicted) {
   if (predicted === "Healthy") return ["#10b981", "#34d399"]; // green
-  if (predicted === "Late Blight") return ["#ef4444", "#f43f5e"]; // red
-  return ["#f97316", "#fbbf24"]; // orange for Early Blight
+  if (diseaseAreaPct >= 30) return ["#ef4444", "#f43f5e"]; // red – critical
+  if (diseaseAreaPct >= 15) return ["#f97316", "#ef4444"]; // orange-red – high
+  if (diseaseAreaPct >= 5) return ["#fbbf24", "#f97316"];  // amber-orange – moderate
+  return ["#84cc16", "#facc15"]; // lime-yellow – low
 }
 
-function SeverityGauge({ confidence, predicted, cfg }) {
+function SeverityGauge({ confidence, diseaseAreaPct = 0, predicted, cfg }) {
   const size = 160;
   const cx = size / 2;
   const cy = size / 2;
   const r = 62;
   const strokeWidth = 14;
-  const circumference = 2 * Math.PI * r;
-  // Arc goes from -225° to +45° (270° total sweep, starting bottom-left)
-  const sweepAngle = 270;
-  const startAngle = -225; // degrees
-  const pct = Math.min(Math.max(confidence, 0), 100);
-  const filled = (pct / 100) * sweepAngle;
 
-  // Convert angle to path
+  // ── Severity is based on DISEASE AREA %, not model confidence ──
+  const sevPct = predicted === "Healthy" ? 0 : Math.min(Math.max(diseaseAreaPct, 0), 100);
+
+  const sweepAngle = 270;
+  const startAngle = -225;
+  const filled = (sevPct / 100) * sweepAngle;
+
   function polarToCartesian(angleDeg) {
     const rad = ((angleDeg - 90) * Math.PI) / 180;
     return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
@@ -217,27 +219,28 @@ function SeverityGauge({ confidence, predicted, cfg }) {
 
   const trackPath = describeArc(startAngle, startAngle + sweepAngle);
   const fillPath = filled > 0 ? describeArc(startAngle, startAngle + filled) : null;
-  const [colorA, colorB] = getGaugeColor(confidence, predicted);
+  const [colorA, colorB] = getGaugeColor(sevPct, predicted);
 
-  // Severity label
+  // Severity label based on disease area %
   const severityLabel =
     predicted === "Healthy"
       ? "No Disease"
-      : pct >= 90 ? "Very High" : pct >= 70 ? "High" : pct >= 50 ? "Moderate" : "Low";
+      : sevPct >= 50 ? "Critical" : sevPct >= 30 ? "Very High" : sevPct >= 15 ? "High" : sevPct >= 5 ? "Moderate" : "Low";
 
   const severityColor =
     predicted === "Healthy" ? "text-emerald-600"
-    : pct >= 90 ? "text-red-600"
-    : pct >= 70 ? "text-orange-600"
-    : pct >= 50 ? "text-amber-600"
+    : sevPct >= 50 ? "text-red-700"
+    : sevPct >= 30 ? "text-red-600"
+    : sevPct >= 15 ? "text-orange-600"
+    : sevPct >= 5 ? "text-amber-600"
     : "text-yellow-600";
 
   return (
     <div className="bg-white rounded-2xl border border-gray-100 p-5 mb-5 shadow-sm">
-      <p className="text-xs font-semibold text-gray-400 uppercase mb-4">Severity Visualization</p>
+      <p className="text-xs font-semibold text-gray-400 uppercase mb-4">Disease Severity Assessment</p>
       <div className="flex flex-col sm:flex-row items-center gap-6">
 
-        {/* Circular gauge */}
+        {/* Circular gauge — shows disease area % */}
         <div className="relative shrink-0" style={{ width: size, height: size }}>
           <svg width={size} height={size}>
             <defs>
@@ -246,50 +249,30 @@ function SeverityGauge({ confidence, predicted, cfg }) {
                 <stop offset="100%" stopColor={colorB} />
               </linearGradient>
             </defs>
-            {/* Track */}
-            <path
-              d={trackPath}
-              fill="none"
-              stroke="#e5e7eb"
-              strokeWidth={strokeWidth}
-              strokeLinecap="round"
-            />
-            {/* Filled arc */}
+            <path d={trackPath} fill="none" stroke="#e5e7eb" strokeWidth={strokeWidth} strokeLinecap="round" />
             {fillPath && (
-              <path
-                d={fillPath}
-                fill="none"
-                stroke="url(#gaugeGrad)"
-                strokeWidth={strokeWidth}
-                strokeLinecap="round"
-                style={{ filter: "drop-shadow(0 0 4px rgba(0,0,0,0.15))" }}
-              />
+              <path d={fillPath} fill="none" stroke="url(#gaugeGrad)" strokeWidth={strokeWidth} strokeLinecap="round" style={{ filter: "drop-shadow(0 0 4px rgba(0,0,0,0.15))" }} />
             )}
           </svg>
-          {/* Centre text */}
           <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <span className={`text-3xl font-extrabold ${severityColor}`}>{pct}%</span>
-            <span className="text-xs text-gray-400 mt-0.5">confidence</span>
+            <span className={`text-3xl font-extrabold ${severityColor}`}>{sevPct}%</span>
+            <span className="text-[10px] text-gray-400 mt-0.5">disease area</span>
           </div>
         </div>
 
-        {/* Right side: severity scale + label */}
+        {/* Right side */}
         <div className="flex-1 w-full">
           <div className="flex items-center justify-between mb-1">
             <span className="text-sm font-semibold text-gray-700">Severity Level</span>
             <span className={`text-sm font-bold ${severityColor}`}>{severityLabel}</span>
           </div>
 
-          {/* Gradient scale bar */}
+          {/* Gradient scale bar — marker at disease area % */}
           <div className="relative h-5 rounded-full overflow-hidden mb-3"
             style={{ background: "linear-gradient(to right, #10b981, #84cc16, #facc15, #f97316, #ef4444)" }}>
-            {/* Marker */}
             <div
               className="absolute top-0 h-full w-1.5 bg-white shadow-md rounded-full transition-all duration-700"
-              style={{
-                left: `calc(${pct}% - 3px)`,
-                boxShadow: "0 0 6px rgba(0,0,0,0.35)"
-              }}
+              style={{ left: `calc(${sevPct}% - 3px)`, boxShadow: "0 0 6px rgba(0,0,0,0.35)" }}
             />
           </div>
           <div className="flex justify-between text-xs text-gray-400 mb-4">
@@ -297,14 +280,15 @@ function SeverityGauge({ confidence, predicted, cfg }) {
           </div>
 
           {/* Mini stats row */}
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-4 gap-2">
             {[
               { label: "Prediction", value: predicted, color: severityColor },
-              { label: "Confidence", value: `${pct}%`, color: severityColor },
-              { label: "Risk Level", value: severityLabel, color: severityColor },
+              { label: "Confidence", value: `${confidence}%`, color: "text-blue-600" },
+              { label: "Disease Area", value: `${sevPct}%`, color: severityColor },
+              { label: "Severity", value: severityLabel, color: severityColor },
             ].map(({ label, value, color }) => (
               <div key={label} className="bg-gray-50 rounded-xl p-2.5 text-center border border-gray-100">
-                <p className="text-xs text-gray-400 mb-0.5">{label}</p>
+                <p className="text-[10px] text-gray-400 mb-0.5">{label}</p>
                 <p className={`text-xs font-bold truncate ${color}`}>{value}</p>
               </div>
             ))}
@@ -970,7 +954,7 @@ export default function DiseasePredictor() {
                 </div>
 
                 {/* ── Severity Gauge ── */}
-                <SeverityGauge confidence={result.confidence} predicted={result.predicted_class} cfg={cfg} />
+                <SeverityGauge confidence={result.confidence} diseaseAreaPct={result.visualizations?.disease_area_pct ?? 0} predicted={result.predicted_class} cfg={cfg} />
 
                 {/* ── Disease Area Visualization ── */}
                 {result.visualizations && (
