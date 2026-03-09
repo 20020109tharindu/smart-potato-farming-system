@@ -101,15 +101,14 @@ def _is_valid_pth_file(path):
 
 
 def download_sprout_pth_if_needed(config):
-    """Download PyTorch sprout .pth from Google Drive using gdown (avoids HTML redirect)."""
+    """Download PyTorch sprout .pth from Google Drive. When model_source is google_drive,
+    always re-download so Colab/Drive updates are picked up (filename stays sprout_heatmap_keypoint_best.pth)."""
     if config.get("model_source") != "google_drive":
         return
     gdrive_urls = config.get("google_drive_urls", {})
     if "sprout_length" not in gdrive_urls:
         return
-    if os.path.exists(SPROUT_PTH_PATH) and _is_valid_pth_file(SPROUT_PTH_PATH):
-        return
-    # Remove bad/corrupt file so we re-download
+    # Always re-download from Drive so updated model in Colab is auto-updated here
     if os.path.exists(SPROUT_PTH_PATH):
         try:
             os.remove(SPROUT_PTH_PATH)
