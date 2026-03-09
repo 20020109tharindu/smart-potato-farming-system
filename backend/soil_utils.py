@@ -19,6 +19,10 @@ _bundle     = None
 _pkl_type   = None   # 'new_bundle' | 'old'
 
 
+def is_model_loaded():
+    return _bundle is not None
+
+
 def load_bundle():
     global _bundle, _pkl_type
     if _bundle is None:
