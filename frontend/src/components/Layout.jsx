@@ -53,9 +53,11 @@ export default function Layout() {
           style={{
             flex: 1,
             marginLeft: 230,
-            padding: "32px 36px",
+            padding: "20px 24px",
             minHeight: "calc(100vh - 60px)",
             boxSizing: "border-box",
+            maxWidth: "1400px",
+            marginRight: "auto",
           }}
         >
           <Outlet />
