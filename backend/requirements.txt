@@ -1,5 +1,6 @@
 blinker==1.9.0
 click==8.3.1
+colorama==0.4.6
 Flask==3.1.2
 flask-cors==6.0.1
 itsdangerous==2.2.0
@@ -7,17 +8,20 @@ Jinja2==3.1.6
 MarkupSafe==3.0.3
 Werkzeug==3.1.3
 wheel==0.45.1
+# Core data / ML
+pandas>=2.0.0
+numpy>=1.24.0
+scikit-learn>=1.3.0
+xgboost>=2.0.0
+lightgbm
+catboost
+# Deep learning (disease model)
 tensorflow
 torch
 torchvision
-numpy
+# Image processing
 pillow
 opencv-python
-scikit-learn
-flask
+# Utilities
 requests
 gdown
-pandas
-xgboost
-lightgbm
-catboost

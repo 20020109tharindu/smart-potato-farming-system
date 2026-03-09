@@ -1,17 +1,58 @@
-# --- ML model weights (do not commit) ---
-backend/models/
-*.h5
-*.keras
-*.pt
-*.pth
-*.pkl
-*.joblib
+# ============================================================
+#  BACKEND .gitignore
+#  Model files are NOT shared with team members via GitHub.
+#  Download the trained model separately from the secure link.
+# ============================================================
 
-# --- local / cache ---
+# --- Trained ML model files (DO NOT COMMIT) ---
+model/*.pkl
+model/*.pickle
+model/*.joblib
+model/*.h5
+model/*.pt
+model/*.pth
+model/*.bin
+model/*.onnx
+model/*.pb
+models/*.pkl
+models/*.pickle
+models/*.joblib
+models/*.h5
+models/*.pt
+models/*.pth
+models/*.bin
+models/*.onnx
+models/*.pb
+
+# Keep model folders in git (README placeholder)
+!model/.gitkeep
+!models/.gitkeep
+
+# --- Python cache ---
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+
+# --- Virtual environment ---
 venv/
 .venv/
-__pycache__/
-*.pyc
-.DS_Store
+env/
+ENV/
+
+# --- Environment variables ---
 .env
+.env.*
+!.env.example
+
+# --- Upload temp folder ---
 uploads/
+
+# --- OS junk ---
+.DS_Store
+Thumbs.db
+
+# --- Logs & temp ---
+*.log
+*.tmp

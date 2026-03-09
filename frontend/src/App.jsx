@@ -7,6 +7,7 @@ import ResultsPage from "./pages/ResultsPage";
 import RecommendationPage from "./pages/RecommendationPage";
 import SeedReadinessPage from "./pages/SeedReadinessPage";
 import DiseasePredictor from "./pages/DiseasePredictor";
+import SoilHealth from "./pages/SoilHealth";
 
 import SignIn from "./pages/SignIn";
 import SignUp from "./pages/SignUp";
@@ -35,14 +36,11 @@ function App() {
         {/* Protected */}
         <Route path='/app' element={<Layout />}>
           <Route index element={<AppDashboard />} />
-          {/* Seed Readiness */}
           <Route path='seed-readiness' element={<SeedReadinessPage />} />
-
-          {/* Empty routes (coming soon) */}
-          <Route path='soil-health' element={null} />
+          <Route path='soil-health' element={<SoilHealth />} />
           <Route path='disease' element={<DiseasePredictor />} />
 
-          {/* COST ANALYSIS ONLY */}
+          {/* Cost analysis */}
           <Route path='cost'>
             <Route index element={<Dashboard />} />
             <Route path='in' element={<InputPage />} />

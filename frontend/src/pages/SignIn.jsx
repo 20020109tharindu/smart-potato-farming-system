@@ -389,7 +389,16 @@ export default function SignIn() {
       await login(email, password);
       navigate("/app");
     } catch (err) {
-      setError(err.message);
+      const code = err.code;
+      if (code === 'auth/invalid-credential' || code === 'auth/wrong-password' || code === 'auth/user-not-found') {
+        setError('Incorrect email or password. Please check your credentials and try again.');
+      } else if (code === 'auth/too-many-requests') {
+        setError('Too many failed attempts. Please wait a few minutes and try again.');
+      } else if (code === 'auth/user-disabled') {
+        setError('This account has been disabled. Please contact support.');
+      } else {
+        setError('Sign in failed. Please try again.');
+      }
     }
     setLoading(false);
   }
