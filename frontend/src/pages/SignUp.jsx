@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../contexts/AuthContext";
 
 import {
   Eye,
@@ -18,6 +19,7 @@ const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function SignUp() {
   const navigate = useNavigate();
+  const { signup } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -67,18 +69,23 @@ export default function SignUp() {
     setTouched({ email: true, password: true, confirm: true });
     if (!validate()) return;
     setLoading(true);
-
-    // Simulate API call
-    setTimeout(() => {
-      if (email && password && confirm) {
-        setSuccess(true);
-        setLoading(false);
-        // In real app: navigate('/app')
+    try {
+      await signup(email, password);
+      setSuccess(true);
+      setTimeout(() => navigate('/sign-in'), 1800);
+    } catch (err) {
+      const code = err.code;
+      if (code === 'auth/email-already-in-use') {
+        setError('This email is already registered. Please sign in instead.');
+      } else if (code === 'auth/weak-password') {
+        setError('Password is too weak. Please choose a stronger password.');
+      } else if (code === 'auth/invalid-email') {
+        setError('Invalid email address format.');
       } else {
-        setError("Something went wrong. Please try again.");
-        setLoading(false);
+        setError('Failed to create account. Please try again.');
       }
-    }, 1500);
+    }
+    setLoading(false);
   }
 
   const isEmailValid = touched.email && !fieldErrors.email && email;
@@ -140,7 +147,7 @@ export default function SignUp() {
           {success && (
             <div className='flex items-start gap-3 text-sm text-green-700 mb-6 bg-green-50 p-4 rounded-2xl border border-green-100 animate-fade-in'>
               <CheckCircle className='w-5 h-5 mt-0.5 flex-shrink-0' />
-              <span>Account created successfully! Redirecting...</span>
+              <span>Account created successfully! Redirecting to sign in...</span>
             </div>
           )}
 

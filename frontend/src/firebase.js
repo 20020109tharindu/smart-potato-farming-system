@@ -4,6 +4,7 @@
 import { initializeApp } from 'firebase/app'
 import { getAuth } from 'firebase/auth'
 import { getDatabase } from 'firebase/database'
+import { getFirestore } from 'firebase/firestore'
 
 const firebaseConfig = {
   apiKey:            import.meta.env.VITE_FIREBASE_API_KEY,
@@ -22,5 +23,8 @@ export const auth = getAuth(app)
 
 // Realtime Database - for IoT sensor data (soil monitoring)
 export const realtimeDb = getDatabase(app)
+
+// Firestore - for saving prediction history & trend data
+export const db = getFirestore(app)
 
 export default app
