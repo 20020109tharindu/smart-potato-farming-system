@@ -530,10 +530,10 @@ const InputPage = () => {
             <LeafIcon />
           </div>
           <div>
-            <div className='ag-hdr-eyebrow'>AgriIntelligence · Sri Lanka</div>
-            <div className='ag-hdr-title'>Potato Yield Predictor</div>
+            <div className='ag-hdr-eyebrow'>SmartPotato · Sri Lanka</div>
+            <div className='ag-hdr-title'>Potato Yield & Cost predictor</div>
           </div>
-          <div className='ag-hdr-badge'>🌱 ML-Powered</div>
+          
         </header>
 
         <div className='ag-card'>

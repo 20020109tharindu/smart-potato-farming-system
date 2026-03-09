@@ -67,7 +67,7 @@ const navItems = [
     to: "/app/disease",
     label: "Disease Predictor",
     desc: "Early warning system",
-    badge: "AI",
+   
     icon: (
       <svg
         width='16'
@@ -89,7 +89,7 @@ const navItems = [
     to: "/app/cost",
     label: "Cost Analysis",
     desc: "Yield & cost forecast",
-    badge: "ML",
+    
     icon: (
       <svg
         width='16'
@@ -277,53 +277,7 @@ export default function Sidebar() {
           })}
         </nav>
 
-        {/* Bottom weather widget — organic feel */}
-        <div
-          style={{
-            background: "linear-gradient(135deg,#eef4ed,#dff0dc)",
-            border: "1px solid rgba(61,122,58,.2)",
-            borderRadius: 12,
-            padding: "12px 14px",
-            display: "flex",
-            alignItems: "center",
-            gap: 10,
-            marginTop: 8,
-            marginBottom: 8,
-          }}
-        >
-          <span style={{ fontSize: 22 }}>🌦️</span>
-          <div style={{ flex: 1 }}>
-            <div
-              style={{
-                fontFamily: "'Inter',sans-serif",
-                fontSize: 12,
-                fontWeight: 600,
-                color: "#1e2d1e",
-              }}
-            >
-              Weather Sync
-            </div>
-            <div
-              style={{
-                fontFamily: "'Inter',sans-serif",
-                fontSize: 10,
-                color: "#5a9e56",
-              }}
-            >
-              Nuwara Eliya
-            </div>
-          </div>
-          <div
-            style={{
-              fontFamily: "'Lora',serif",
-              fontSize: 18,
-              fontWeight: 700,
-              color: "#3d7a3a",
-            }}
-          >
-            28°C
-          </div>
-        </div>
+
 
         <div
           style={{
