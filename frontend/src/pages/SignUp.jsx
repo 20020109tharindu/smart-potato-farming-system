@@ -72,7 +72,7 @@ export default function SignUp() {
     try {
       await signup(email, password);
       setSuccess(true);
-      setTimeout(() => navigate('/sign-in'), 1800);
+      setTimeout(() => navigate('/signin'), 1800);
     } catch (err) {
       const code = err.code;
       if (code === 'auth/email-already-in-use') {
@@ -82,7 +82,7 @@ export default function SignUp() {
       } else if (code === 'auth/invalid-email') {
         setError('Invalid email address format.');
       } else {
-        setError('Failed to create account. Please try again.');
+        setError('Failed to create account: ' + (err.message || 'Unknown error'));
       }
     }
     setLoading(false);
