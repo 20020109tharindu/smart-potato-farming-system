@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import ImageUpload from "../components/ImageUpload";
 
 const fmt = (lbl) =>
@@ -10,6 +10,10 @@ export default function SeedReadinessPage() {
   const resultRef = useRef(null);
   const [result, setResult] = useState(null);
   const [rawOutput, setRawOutput] = useState(null);
+  const [showSproutPreview, setShowSproutPreview] = useState(true);
+  const [previewZoomOpen, setPreviewZoomOpen] = useState(false);
+  const [previewZoomScale, setPreviewZoomScale] = useState(1);
+  const zoomContainerRef = useRef(null);
 
   const handlePrediction = (data) => {
     if (!data) {
@@ -63,6 +67,13 @@ export default function SeedReadinessPage() {
 
   const feedback = result?.personalized_feedback;
 
+  useEffect(() => {
+    if (!previewZoomOpen) return;
+    const onKey = (e) => { if (e.key === "Escape") setPreviewZoomOpen(false); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [previewZoomOpen]);
+
   return (
     <div className="seed-readiness-page">
       <style>{`
@@ -110,6 +121,99 @@ export default function SeedReadinessPage() {
         {/* Results */}
         {result && (
           <div ref={resultRef} className="space-y-4">
+            {/* Sprout-marked preview: collapsible, click to zoom */}
+            {rawOutput?.sprout_annotated_image && (
+              <section className="sr-card p-5">
+                <button
+                  type="button"
+                  onClick={() => setShowSproutPreview((v) => !v)}
+                  className="w-full flex items-center justify-between gap-2 text-left mb-2"
+                >
+                  <h3 className="text-sm font-medium text-[var(--sr-green)]">
+                    Predicted sprout on your photo
+                  </h3>
+                  <span className="text-xs text-[var(--sr-muted)]">
+                    {showSproutPreview ? "Hide" : "Show"}
+                  </span>
+                </button>
+                {showSproutPreview && (
+                  <>
+                    <p className="text-xs text-[var(--sr-muted)] mb-3">
+                      Green line = sprout length (base → tip). Click image to zoom.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => { setPreviewZoomScale(1); setPreviewZoomOpen(true); }}
+                      className="rounded-lg overflow-hidden border border-[var(--sr-green-bg)] bg-[var(--sr-green-bg)]/30 block w-full cursor-zoom-in hover:border-[var(--sr-green-soft)]/50 transition-colors"
+                    >
+                      <img
+                        src={`data:image/jpeg;base64,${rawOutput.sprout_annotated_image}`}
+                        alt="Seed with predicted sprout length marked"
+                        className="block max-h-[280px] w-full object-contain pointer-events-none"
+                      />
+                    </button>
+                  </>
+                )}
+
+                {/* Zoom overlay / lightbox */}
+                {previewZoomOpen && (
+                  <div
+                    className="fixed inset-0 z-[100] bg-black/80 flex flex-col items-center justify-center p-4"
+                    onClick={(e) => e.target === e.currentTarget && setPreviewZoomOpen(false)}
+                  >
+                    <div className="flex items-center justify-between w-full max-w-4xl mb-2 gap-2">
+                      <span className="text-white/90 text-sm">Sprout preview — zoom to see detail</span>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setPreviewZoomScale((s) => Math.max(0.5, s - 0.25))}
+                          className="text-white bg-white/20 hover:bg-white/30 rounded-lg px-3 py-1.5 text-sm font-medium"
+                        >
+                          −
+                        </button>
+                        <span className="text-white/80 text-sm min-w-[4rem] text-center">{Math.round(previewZoomScale * 100)}%</span>
+                        <button
+                          type="button"
+                          onClick={() => setPreviewZoomScale((s) => Math.min(3, s + 0.25))}
+                          className="text-white bg-white/20 hover:bg-white/30 rounded-lg px-3 py-1.5 text-sm font-medium"
+                        >
+                          +
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setPreviewZoomOpen(false)}
+                          className="text-white bg-white/20 hover:bg-white/30 rounded-lg px-3 py-1.5 text-sm font-medium"
+                        >
+                          Close
+                        </button>
+                      </div>
+                    </div>
+                    <div
+                      ref={zoomContainerRef}
+                      className="overflow-auto flex-1 flex items-center justify-center min-h-0 w-full"
+                      style={{ maxHeight: "calc(100vh - 120px)" }}
+                      onWheel={(e) => {
+                        e.preventDefault();
+                        setPreviewZoomScale((s) => {
+                          const next = e.deltaY < 0 ? s + 0.15 : s - 0.15;
+                          return Math.max(0.5, Math.min(3, next));
+                        });
+                      }}
+                    >
+                      <img
+                        src={`data:image/jpeg;base64,${rawOutput.sprout_annotated_image}`}
+                        alt="Sprout marked"
+                        className="max-w-full select-none"
+                        style={{ transform: `scale(${previewZoomScale})`, transformOrigin: "center" }}
+                        onClick={(e) => e.stopPropagation()}
+                        draggable={false}
+                      />
+                    </div>
+                  </div>
+                )}
+              </section>
+            )}
+
             {/* Feedback + Readiness in one card */}
             <section className="sr-card p-5">
               {feedback && (
@@ -139,15 +243,24 @@ export default function SeedReadinessPage() {
                   {result.readiness}
                 </span>
               </div>
-              <div className="flex items-center gap-2 mt-2">
-                <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
-                  <div
-                    className="h-full rounded-full bg-[var(--sr-green-soft)]/80 transition-all duration-400"
-                    style={{ width: `${Math.min(100, result.confidence)}%` }}
-                  />
-                </div>
-                <span className="text-xs text-[var(--sr-muted)] w-10 text-right">{result.confidence}%</span>
-              </div>
+              {/* Bar shows readiness level (high when Ready, low when Not Ready), not model confidence */}
+              {(() => {
+                const r = (result.readiness || "").toLowerCase();
+                const isReady = (r.includes("ready") && !r.includes("not")) || r.includes("suitable") || r.includes("good");
+                const readinessBarPct = isReady ? 100 : 25;
+                return (
+                  <div className="flex items-center gap-2 mt-2">
+                    <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all duration-400 ${isReady ? "bg-[var(--sr-green-soft)]/80" : "bg-amber-500/70"}`}
+                        style={{ width: `${readinessBarPct}%` }}
+                      />
+                    </div>
+                    <span className="text-xs text-[var(--sr-muted)] w-10 text-right">{readinessBarPct}%</span>
+                  </div>
+                );
+              })()}
+              <p className="text-xs text-[var(--sr-muted)] mt-1">Model confidence: {result.confidence}%</p>
             </section>
 
             {/* Metrics — compact */}

@@ -196,4 +196,6 @@ def predict_sprout_length_from_image(img_bgr, model_path, preprocess_crop_resize
         "label": label,
         "confidence": confidence,
         "top3": top3[:3],
+        "base_xy": [round(base_xy[0], 2), round(base_xy[1], 2)],
+        "tip_xy": [round(tip_xy[0], 2), round(tip_xy[1], 2)],
     }

@@ -1,4 +1,5 @@
 # backend/utils/predict.py
+import base64
 import os
 import json
 import glob
@@ -287,5 +288,22 @@ def predict_one(image_path):
                 for i in top3
             ]
         }
+
+    # Annotated image: draw predicted sprout (base -> tip) on 256x256 crop when keypoints exist
+    sprout = output.get("sprout_length") or {}
+    base_xy = sprout.get("base_xy")
+    tip_xy = sprout.get("tip_xy")
+    if base_xy and tip_xy:
+        img_rgb = to_square_resize_256_rgb(img_bgr)
+        if img_rgb is not None:
+            img_draw = np.ascontiguousarray(img_rgb.copy())
+            img_bgr_draw = cv2.cvtColor(img_draw, cv2.COLOR_RGB2BGR)
+            pt_base = (int(round(base_xy[0])), int(round(base_xy[1])))
+            pt_tip = (int(round(tip_xy[0])), int(round(tip_xy[1])))
+            cv2.line(img_bgr_draw, pt_base, pt_tip, (0, 200, 0), 3)
+            cv2.circle(img_bgr_draw, pt_base, 8, (0, 255, 0), 2)
+            cv2.circle(img_bgr_draw, pt_tip, 8, (0, 180, 0), 2)
+            _, buf = cv2.imencode(".jpg", img_bgr_draw)
+            output["sprout_annotated_image"] = base64.b64encode(buf).decode("utf-8")
 
     return output
