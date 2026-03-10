@@ -16,14 +16,11 @@ backend/models/*.keras
 backend/uploads/
 
 # Env vars
-.env
-.env.local
 
 # macOS
 .DS_Store
 
 # VS Code
-.vscode/
 
 # Node
 frontend/node_modules/
@@ -31,3 +28,5 @@ frontend/dist/
 
 # Root package-lock
 package-lock.json
+config.bat
+node_modules
