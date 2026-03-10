@@ -55,59 +55,67 @@ export default function ImageUpload({ onResult }) {
   }
 
   return (
-    <div>
-      <form onSubmit={handleSubmit} className="space-y-3">
-        <input
-          ref={inputRef}
-          type="file"
-          accept="image/*"
-          onChange={handleFileChange}
-          aria-label="Upload image"
-          className="block"
-        />
+    <div className="image-upload-wrap">
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <label className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 border-dashed border-[#4caf76]/50 bg-[#e8f8ef]/50 text-[#1a3d28] font-medium text-sm cursor-pointer hover:bg-[#e8f8ef] transition-colors">
+          <input
+            ref={inputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleFileChange}
+            aria-label="Upload image"
+            className="sr-only"
+          />
+          <span>📁</span> Choose photo
+        </label>
 
         {preview ? (
-          <div className="flex flex-col md:flex-row items-start gap-4">
-            {/* Thumbnail */}
-            <div style={{ width: 220, height: 220, overflow: "hidden", borderRadius: 12, background: "#f8fafc", flex: "0 0 auto" }}>
+          <div className="flex flex-col md:flex-row items-start gap-5">
+            <div className="w-[220px] h-[220px] overflow-hidden rounded-xl bg-[#f4fdf7] border border-[#c8f0d8] flex-shrink-0 shadow-sm">
               <img
                 src={preview}
-                alt="preview"
-                style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+                alt="Preview"
+                className="w-full h-full object-cover block"
               />
             </div>
-
-            {/* Details + actions */}
-            <div className="flex-1">
-              <div className="text-sm text-gray-600">
-                <div><strong>{file?.name || ""}</strong></div>
-                <div className="text-xs">{file ? humanFileSize(file.size) : ""}</div>
+            <div className="flex-1 min-w-0">
+              <div className="text-sm text-[#1a3d28]">
+                <div className="font-medium truncate">{file?.name || ""}</div>
+                <div className="text-xs text-[#5a8a6e]">{file ? humanFileSize(file.size) : ""}</div>
               </div>
-
-              <div className="mt-4 flex gap-2">
+              <div className="mt-4 flex flex-wrap gap-2">
                 <button
                   type="submit"
                   disabled={!file || loading}
-                  className="px-4 py-2 rounded-md text-white"
-                  style={{ background: "linear-gradient(90deg,#16a34a,#84cc16)" }}
+                  className="px-5 py-2.5 rounded-xl text-white font-medium text-sm shadow-md hover:opacity-90 disabled:opacity-60 transition-opacity bg-gradient-to-r from-[#2a5c3f] to-[#4caf76]"
                 >
-                  {loading ? "Predicting..." : "Predict"}
+                  {loading ? "Analyzing…" : "Analyze seed"}
                 </button>
-
-                <button type="button" onClick={clearAll} className="px-4 py-2 rounded-md border">
+                <button
+                  type="button"
+                  onClick={clearAll}
+                  className="px-4 py-2.5 rounded-xl border border-[#2a5c3f]/30 text-[#1a3d28] text-sm font-medium hover:bg-[#e8f8ef] transition-colors"
+                >
                   Clear
                 </button>
-
-                <a href={preview} target="_blank" rel="noreferrer" className="px-4 py-2 rounded-md border text-sm">
+                <a
+                  href={preview}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="px-4 py-2.5 rounded-xl border border-[#2a5c3f]/30 text-[#1a3d28] text-sm font-medium hover:bg-[#e8f8ef] transition-colors inline-block"
+                >
                   Open
                 </a>
               </div>
-
-              {error && <div style={{ color: "#b00020" }} className="mt-2">{error}</div>}
+              {error && (
+                <div className="mt-3 text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">
+                  {error}
+                </div>
+              )}
             </div>
           </div>
         ) : (
-          <div className="text-sm text-gray-500">No image selected</div>
+          <div className="text-sm text-[#5a8a6e]">Choose an image above to get started.</div>
         )}
       </form>
     </div>

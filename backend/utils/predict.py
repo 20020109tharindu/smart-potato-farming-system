@@ -1,4 +1,5 @@
 # backend/utils/predict.py
+import base64
 import os
 import json
 import glob
@@ -101,15 +102,14 @@ def _is_valid_pth_file(path):
 
 
 def download_sprout_pth_if_needed(config):
-    """Download PyTorch sprout .pth from Google Drive using gdown (avoids HTML redirect)."""
+    """Download PyTorch sprout .pth from Google Drive. When model_source is google_drive,
+    always re-download so Colab/Drive updates are picked up (filename stays sprout_heatmap_keypoint_best.pth)."""
     if config.get("model_source") != "google_drive":
         return
     gdrive_urls = config.get("google_drive_urls", {})
     if "sprout_length" not in gdrive_urls:
         return
-    if os.path.exists(SPROUT_PTH_PATH) and _is_valid_pth_file(SPROUT_PTH_PATH):
-        return
-    # Remove bad/corrupt file so we re-download
+    # Always re-download from Drive so updated model in Colab is auto-updated here
     if os.path.exists(SPROUT_PTH_PATH):
         try:
             os.remove(SPROUT_PTH_PATH)
@@ -288,5 +288,22 @@ def predict_one(image_path):
                 for i in top3
             ]
         }
+
+    # Annotated image: draw predicted sprout (base -> tip) on 256x256 crop when keypoints exist
+    sprout = output.get("sprout_length") or {}
+    base_xy = sprout.get("base_xy")
+    tip_xy = sprout.get("tip_xy")
+    if base_xy and tip_xy:
+        img_rgb = to_square_resize_256_rgb(img_bgr)
+        if img_rgb is not None:
+            img_draw = np.ascontiguousarray(img_rgb.copy())
+            img_bgr_draw = cv2.cvtColor(img_draw, cv2.COLOR_RGB2BGR)
+            pt_base = (int(round(base_xy[0])), int(round(base_xy[1])))
+            pt_tip = (int(round(tip_xy[0])), int(round(tip_xy[1])))
+            cv2.line(img_bgr_draw, pt_base, pt_tip, (0, 200, 0), 3)
+            cv2.circle(img_bgr_draw, pt_base, 8, (0, 255, 0), 2)
+            cv2.circle(img_bgr_draw, pt_tip, 8, (0, 180, 0), 2)
+            _, buf = cv2.imencode(".jpg", img_bgr_draw)
+            output["sprout_annotated_image"] = base64.b64encode(buf).decode("utf-8")
 
     return output
