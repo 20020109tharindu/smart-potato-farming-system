@@ -78,5 +78,25 @@
     "note": "",
     "date": "2026-03-09",
     "created_at": "2026-03-09T19:54:35.431425"
+  },
+  {
+    "id": "63ca93ee-deb7-4dbf-a440-597d8090e837",
+    "lat": 7.8089631205593895,
+    "lng": 81.46362304687501,
+    "disease": "Late Blight",
+    "severity": "Very High",
+    "note": "",
+    "date": "2026-03-10",
+    "created_at": "2026-03-10T09:53:06.813150"
+  },
+  {
+    "id": "fbff7425-8c3b-4422-a2c2-4e0f9a993eee",
+    "lat": 6.68643125265198,
+    "lng": 81.18621826171876,
+    "disease": "Late Blight",
+    "severity": "High",
+    "note": "gadded",
+    "date": "2026-03-10",
+    "created_at": "2026-03-10T13:42:19.310548"
   }
 ]
