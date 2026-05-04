@@ -13,6 +13,9 @@ import "leaflet/dist/leaflet.css";
 const API_URL        = "http://127.0.0.1:5000/api/predict-disease";
 const ESP32_API_URL  = "http://127.0.0.1:5000/api/predict-from-esp32";
 const REPORTS_API    = "http://127.0.0.1:5000/api/disease-reports";
+const ESP32_BASE_URL = "http://10.81.119.16";
+const ESP32_STREAM_URL = "http://10.81.119.16:81/stream";
+const ESP32_CAPTURE_URL = "http://10.81.119.16/capture";
 
 const CLASS_CONFIG = {
   "Early Blight": {
@@ -343,10 +346,11 @@ export default function DiseasePredictor() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
-  const [esp32Ip, setEsp32Ip] = useState("10.27.132.16");
+  const [esp32Ip] = useState("10.81.119.16");
   const [esp32Loading, setEsp32Loading] = useState(false);
   const [liveMode, setLiveMode] = useState(false);
   const [streamKey, setStreamKey] = useState(0);
+  const [streamSrc, setStreamSrc] = useState(ESP32_CAPTURE_URL);
   const inputRef = useRef(null);
 
   /* ── AI Recommendation state ── */
@@ -459,9 +463,23 @@ export default function DiseasePredictor() {
   }
 
   function streamUrl() {
-    const ip = esp32Ip.replace(/^https?:\/\//, "");
-    return `http://${ip}:81/stream`;
+    return ESP32_STREAM_URL;
   }
+
+  useEffect(() => {
+    if (!liveMode) return;
+    let isMounted = true;
+    const updateStream = () => {
+      if (!isMounted) return;
+      setStreamSrc(`${ESP32_CAPTURE_URL}?t=${Date.now()}`);
+    };
+    updateStream();
+    const intervalId = setInterval(updateStream, 500);
+    return () => {
+      isMounted = false;
+      clearInterval(intervalId);
+    };
+  }, [liveMode]);
 
   async function analyze(e) {
     e?.preventDefault();
@@ -496,7 +514,7 @@ export default function DiseasePredictor() {
     setPreview(null);
     setFile(null);
     try {
-      const res = await axios.post(ESP32_API_URL, { esp32_ip: esp32Ip }, { timeout: 30000 });
+      const res = await axios.post(ESP32_API_URL, { esp32_ip: ESP32_BASE_URL }, { timeout: 30000 });
       setResult(res.data);
       if (res.data?.success) fetchAiRecommendation(res.data);
       // Show the combined visualization as the preview
@@ -752,7 +770,7 @@ export default function DiseasePredictor() {
                 <div className="rounded-xl overflow-hidden border-2 border-blue-200 bg-black" style={{ minHeight: 260 }}>
                   <img
                     key={streamKey}
-                    src={streamUrl()}
+                    src={streamSrc}
                     alt="ESP32-CAM Live"
                     className="w-full object-contain"
                     style={{ maxHeight: 280 }}
@@ -844,9 +862,9 @@ export default function DiseasePredictor() {
                 <input
                   type="text"
                   value={esp32Ip}
-                  onChange={(e) => setEsp32Ip(e.target.value)}
-                  placeholder="172.20.10.2"
-                  className="flex-1 text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-300 font-mono"
+                  readOnly
+                  disabled
+                  className="flex-1 text-sm border border-gray-200 rounded-lg px-3 py-2 bg-gray-50 text-gray-500 font-mono"
                 />
                 <button
                   onClick={() => { setLiveMode(true); setStreamKey(k => k + 1); setError(null); }}
