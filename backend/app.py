@@ -5,7 +5,7 @@ import numpy as np
 from flask_cors import CORS
 from utils.predict import predict_one
 from dotenv import load_dotenv
-
+ 
 load_dotenv()
 
 app = Flask(__name__)

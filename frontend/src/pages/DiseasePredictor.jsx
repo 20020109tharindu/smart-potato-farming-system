@@ -52,9 +52,9 @@ const FERTILIZER_CONFIG = {
 
 const LEVEL_BADGE = {
   Low:          "bg-gray-100 text-gray-600",
-  Medium:       "bg-yellow-100 text-yellow-700",
+  Moderate:     "bg-yellow-100 text-yellow-700",
   High:         "bg-orange-100 text-orange-700",
-  "Very High":  "bg-red-100 text-red-700",
+  Critical:     "bg-red-100 text-red-700",
   Maximum:      "bg-red-200 text-red-800 font-bold",
   Standard:     "bg-green-100 text-green-700",
   Balanced:     "bg-green-100 text-green-700",
@@ -62,9 +62,9 @@ const LEVEL_BADGE = {
 
 const LEVEL_BAR = {
   Low:         { width: "20%",  color: "bg-gray-400" },
-  Medium:      { width: "45%",  color: "bg-yellow-400" },
+  Moderate:    { width: "45%",  color: "bg-yellow-400" },
   High:        { width: "65%",  color: "bg-orange-400" },
-  "Very High": { width: "85%",  color: "bg-red-400" },
+  Critical:    { width: "85%",  color: "bg-red-400" },
   Maximum:     { width: "100%", color: "bg-red-600" },
   Standard:    { width: "40%",  color: "bg-green-400" },
   Balanced:    { width: "40%",  color: "bg-green-400" },
@@ -185,13 +185,13 @@ function DiseaseVizPanel({ viz, predicted }) {
 // ── Severity colour stops for the gauge arc ──────────────────────────────────
 function getGaugeColor(diseaseAreaPct, predicted) {
   if (predicted === "Healthy") return ["#10b981", "#34d399"]; // green
-  if (diseaseAreaPct >= 30) return ["#ef4444", "#f43f5e"]; // red – critical
-  if (diseaseAreaPct >= 15) return ["#f97316", "#ef4444"]; // orange-red – high
-  if (diseaseAreaPct >= 5) return ["#fbbf24", "#f97316"];  // amber-orange – moderate
+  if (diseaseAreaPct >= 80) return ["#ef4444", "#f43f5e"]; // red – critical
+  if (diseaseAreaPct >= 50) return ["#f97316", "#ef4444"]; // orange-red – high
+  if (diseaseAreaPct >= 20) return ["#fbbf24", "#f97316"]; // amber-orange – medium
   return ["#84cc16", "#facc15"]; // lime-yellow – low
 }
 
-function SeverityGauge({ confidence, diseaseAreaPct = 0, predicted, cfg }) {
+function SeverityGauge({ diseaseAreaPct = 0, predicted }) {
   const size = 160;
   const cx = size / 2;
   const cy = size / 2;
@@ -223,17 +223,13 @@ function SeverityGauge({ confidence, diseaseAreaPct = 0, predicted, cfg }) {
 
   // Severity label based on disease area %
   const severityLabel =
-    predicted === "Healthy"
-      ? "No Disease"
-      : sevPct >= 50 ? "Critical" : sevPct >= 30 ? "Very High" : sevPct >= 15 ? "High" : sevPct >= 5 ? "Moderate" : "Low";
+    sevPct >= 80 ? "Critical" : sevPct >= 50 ? "High" : sevPct >= 20 ? "Moderate" : "Low";
 
   const severityColor =
-    predicted === "Healthy" ? "text-emerald-600"
-    : sevPct >= 50 ? "text-red-700"
-    : sevPct >= 30 ? "text-red-600"
-    : sevPct >= 15 ? "text-orange-600"
-    : sevPct >= 5 ? "text-amber-600"
-    : "text-yellow-600";
+    sevPct >= 80 ? "text-red-700"
+    : sevPct >= 50 ? "text-red-600"
+    : sevPct >= 20 ? "text-orange-600"
+    : "text-emerald-600";
 
   return (
     <div className="bg-white rounded-2xl border border-gray-100 p-5 mb-5 shadow-sm">
@@ -280,10 +276,9 @@ function SeverityGauge({ confidence, diseaseAreaPct = 0, predicted, cfg }) {
           </div>
 
           {/* Mini stats row */}
-          <div className="grid grid-cols-4 gap-2">
+          <div className="grid grid-cols-3 gap-2">
             {[
               { label: "Prediction", value: predicted, color: severityColor },
-              { label: "Confidence", value: `${confidence}%`, color: "text-blue-600" },
               { label: "Disease Area", value: `${sevPct}%`, color: severityColor },
               { label: "Severity", value: severityLabel, color: severityColor },
             ].map(({ label, value, color }) => (
@@ -311,6 +306,8 @@ const MAP_SEVERITY_BADGE = {
   Low: "bg-yellow-100 text-yellow-800",
   Moderate: "bg-orange-100 text-orange-800",
   High: "bg-red-100 text-red-800",
+  Critical: "bg-red-200 text-red-900",
+  Medium: "bg-orange-100 text-orange-800",
   "Very High": "bg-red-200 text-red-900",
 };
 
@@ -642,9 +639,9 @@ export default function DiseasePredictor() {
                     <select value={mapForm.severity} onChange={(e) => setMapForm({ ...mapForm, severity: e.target.value })}
                       className="w-full mt-1 border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-green-500 outline-none">
                       <option>Low</option>
-                      <option>Moderate</option>
+                        <option>Moderate</option>
                       <option>High</option>
-                      <option>Very High</option>
+                      <option>Critical</option>
                     </select>
                   </label>
 
@@ -941,20 +938,11 @@ export default function DiseasePredictor() {
                     </div>
                     <div className="text-5xl opacity-80">{cfg.icon}</div>
                   </div>
-                  <p className="text-white/80 text-sm mb-4">{cfg.description}</p>
-                  <div>
-                    <div className="flex justify-between text-xs text-white/70 mb-1">
-                      <span>Model Confidence</span>
-                      <span className="font-bold text-white">{result.confidence}%</span>
-                    </div>
-                    <div className="bg-white/20 rounded-full h-2.5">
-                      <div className="bg-white h-2.5 rounded-full transition-all duration-700" style={{ width: `${result.confidence}%` }} />
-                    </div>
-                  </div>
+                  <p className="text-white/80 text-sm">{cfg.description}</p>
                 </div>
 
                 {/* ── Severity Gauge ── */}
-                <SeverityGauge confidence={result.confidence} diseaseAreaPct={result.visualizations?.disease_area_pct ?? 0} predicted={result.predicted_class} cfg={cfg} />
+                <SeverityGauge diseaseAreaPct={result.visualizations?.disease_area_pct ?? 0} predicted={result.predicted_class} />
 
                 {/* ── Disease Area Visualization ── */}
                 {result.visualizations && (
@@ -1138,8 +1126,8 @@ export default function DiseasePredictor() {
                         const item = aiRec[key];
                         if (!item) return null;
                         const lvl = item.level || "—";
-                        const badgeMap = { Low: "bg-gray-100 text-gray-600", Medium: "bg-yellow-100 text-yellow-700", High: "bg-orange-100 text-orange-700", "Very High": "bg-red-100 text-red-700" };
-                        const barMap = { Low: "20%", Medium: "45%", High: "65%", "Very High": "85%" };
+                        const badgeMap = { Low: "bg-gray-100 text-gray-600", Moderate: "bg-yellow-100 text-yellow-700", High: "bg-orange-100 text-orange-700", Critical: "bg-red-100 text-red-700", Medium: "bg-yellow-100 text-yellow-700", "Very High": "bg-red-100 text-red-700" };
+                        const barMap = { Low: "20%", Moderate: "45%", High: "65%", Critical: "85%", Medium: "45%", "Very High": "85%" };
                         return (
                           <div key={key} className={`bg-${color}-50 rounded-xl p-4 border border-${color}-100 flex flex-col items-center text-center`}>
                             <span className="text-2xl mb-1">{icon}</span>

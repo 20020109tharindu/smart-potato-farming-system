@@ -24,6 +24,8 @@ const SEVERITY_BADGE = {
   Low: "bg-yellow-100 text-yellow-800",
   Moderate: "bg-orange-100 text-orange-800",
   High: "bg-red-100 text-red-800",
+  Critical: "bg-red-200 text-red-900",
+  Medium: "bg-orange-100 text-orange-800",
   "Very High": "bg-red-200 text-red-900",
 };
 
@@ -285,7 +287,7 @@ export default function DiseaseMap() {
                   <option>Low</option>
                   <option>Moderate</option>
                   <option>High</option>
-                  <option>Very High</option>
+                  <option>Critical</option>
                 </select>
               </label>
 
