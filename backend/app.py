@@ -583,7 +583,7 @@ def predict_disease():
 def predict_from_esp32():
     """Fetch a JPEG from ESP32-CAM /capture, run disease prediction, return same JSON as /predict-disease."""
     data = request.get_json(silent=True) or {}
-    esp32_ip = data.get("esp32_ip", "172.20.10.2").strip().rstrip("/")
+    esp32_ip = data.get("esp32_ip", "172.20.10.3").strip().rstrip("/")
     if not esp32_ip.startswith("http"):
         esp32_ip = "http://" + esp32_ip
     capture_url = esp32_ip + "/capture"
