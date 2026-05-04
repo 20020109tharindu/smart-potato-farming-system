@@ -25,7 +25,7 @@ const SLIDES = [
     stat:     '📍 Badulla · Uva Province · Sri Lanka',
   },
   {
-    img:      'https://images.unsplash.com/photo-1624204386084-dd8b5c3cb875?auto=format&fit=crop&w=1200&q=85',
+    img:      'https://images.pexels.com/photos/8369485/pexels-photo-8369485.jpeg?auto=compress&cs=tinysrgb&w=1200&h=500&fit=crop',
     gradient: 'from-green-950 via-lime-950 to-emerald-950',
     accent:   '#86efac',
     tag:      '🌱  Potato Growth Stages · Maha & Yala Seasons',
@@ -34,7 +34,7 @@ const SLIDES = [
     stat:     '4 Growth Stages · Maha (Oct–Feb) & Yala (Mar–Aug)',
   },
   {
-    img:      'https://images.unsplash.com/photo-1416879595882-3373a0480b5b?auto=format&fit=crop&w=1200&q=85',
+    img:      'https://images.pexels.com/photos/9608574/pexels-photo-9608574.jpeg?auto=compress&cs=tinysrgb&w=1200&h=500&fit=crop',
     gradient: 'from-blue-950 via-sky-950 to-cyan-950',
     accent:   '#38bdf8',
     tag:      '📡  IoT Sensor · NodeMCU ESP32 · Firebase',
@@ -43,7 +43,7 @@ const SLIDES = [
     stat:     '7 Parameters · Real-Time · Firebase Sync',
   },
   {
-    img:      'https://images.unsplash.com/photo-1464226184884-fa280b87c399?auto=format&fit=crop&w=1200&q=85',
+    img:      'https://images.pexels.com/photos/144248/potatoes-vegetables-erdfrucht-bio-144248.jpeg?auto=compress&cs=tinysrgb&w=1200&h=500&fit=crop',
     gradient: 'from-teal-950 via-emerald-950 to-cyan-950',
     accent:   '#2dd4bf',
     tag:      '🧪  Uva Highland Soil Requirements',
@@ -52,7 +52,7 @@ const SLIDES = [
     stat:     '🌡️ Calibrated for Uva Highland Elevation',
   },
   {
-    img:      'https://images.unsplash.com/photo-1580910051074-3eb694886505?auto=format&fit=crop&w=1200&q=85',
+    img:      'https://images.pexels.com/photos/35873595/pexels-photo-35873595.jpeg?auto=compress&cs=tinysrgb&w=1200&h=500&fit=crop',
     gradient: 'from-purple-950 via-violet-950 to-indigo-950',
     accent:   '#c084fc',
     tag:      '📊  Fertilizer · Reports · History',
@@ -97,6 +97,101 @@ const PARAM_RANGES = {
   Temperature: { lo: 15,   hi: 22,   warn: 2    },
   Moisture:    { lo: 50,   hi: 72,   warn: 8    },
 };
+
+// Hard sanity limits for live sensor visualization & live prediction
+// (user requirement: keep displayed values within these ranges)
+const LIVE_LIMITS = {
+  pH: 10,
+  EC: 1,
+  N: 100,
+  P: 500,
+  K: 1000,
+  Temperature: 50,
+  Moisture: 100,
+};
+
+function toFiniteNumber(v) {
+  if (v == null) return null;
+  const n = typeof v === 'string' ? Number(v) : v;
+  return Number.isFinite(n) ? n : null;
+}
+
+function clamp01Range(value, min, max) {
+  if (value == null) return null;
+  return Math.min(max, Math.max(min, value));
+}
+
+function format1dpTrunc(value) {
+  const n = toFiniteNumber(value);
+  if (n == null) return null;
+  // Truncate (not round) to 1 decimal to keep live UI stable.
+  return (Math.floor(n * 10) / 10).toFixed(1);
+}
+
+function normalizeFromFirebaseSoil(raw) {
+  // Firebase keys observed: pH, conductivity, nitrogen, phosphorus, potassium, temperature, moisture
+  // Expected by backend/UI: pH, EC (mS/cm), N, P, K (ppm), Temperature (°C), Moisture (%)
+  let pH = toFiniteNumber(raw?.pH);
+  if (pH != null && pH > 14) pH = pH / 1000; // e.g. 6553.5 -> 6.5535
+  pH = clamp01Range(pH, 0, LIVE_LIMITS.pH);
+
+  let EC = toFiniteNumber(raw?.conductivity);
+  if (EC != null) {
+    // Common sensor patterns:
+    // - conductivity stored as (uS/cm * 100) => convert to mS/cm by /100000
+    // - conductivity stored as uS/cm        => convert to mS/cm by /1000
+    if (EC > 5) EC = EC / 100000;
+    else if (EC > 1) EC = EC / 1000;
+    EC = clamp01Range(EC, 0, LIVE_LIMITS.EC);
+  }
+
+  let N = toFiniteNumber(raw?.nitrogen);
+  if (N != null) {
+    if (N > 1000) N = N / 1000;   // e.g. 64245 -> 64.245
+    else if (N > LIVE_LIMITS.N) N = N / 10;
+    N = clamp01Range(N, 0, LIVE_LIMITS.N);
+  }
+
+  let P = toFiniteNumber(raw?.phosphorus);
+  if (P != null) {
+    if (P > 1000) P = P / 1000;   // e.g. 65535 -> 65.535
+    else if (P > LIVE_LIMITS.P) P = P / 10;
+    P = clamp01Range(P, 0, LIVE_LIMITS.P);
+  }
+
+  let K = toFiniteNumber(raw?.potassium);
+  if (K != null) {
+    if (K > 1000) K = K / 1000;   // e.g. 65535 -> 65.535
+    K = clamp01Range(K, 0, LIVE_LIMITS.K);
+  }
+
+  let Temperature = toFiniteNumber(raw?.temperature);
+  if (Temperature != null) {
+    // Handle typical scaling: value may be *100
+    if (Temperature > 150) {
+      const base = Temperature / 100;
+      // If base looks like Fahrenheit (e.g. 65°F), convert to Celsius.
+      if (base > 50 && base <= 140) {
+        const c = (base - 32) * (5 / 9);
+        Temperature = c;
+      } else {
+        Temperature = base;
+      }
+    } else if (Temperature > 50 && Temperature <= 140) {
+      // Unscaled Fahrenheit
+      Temperature = (Temperature - 32) * (5 / 9);
+    }
+    Temperature = clamp01Range(Temperature, 0, LIVE_LIMITS.Temperature);
+  }
+
+  let Moisture = toFiniteNumber(raw?.moisture);
+  if (Moisture != null) {
+    if (Moisture > 100) Moisture = Moisture / 100; // e.g. 6553.1 -> 65.531%
+    Moisture = clamp01Range(Moisture, 0, LIVE_LIMITS.Moisture);
+  }
+
+  return { pH, EC, N, P, K, Temperature, Moisture };
+}
 
 function getParamStatus(key, value) {
   if (value == null) return 'unknown';
@@ -470,15 +565,7 @@ export default function SoilHealth() {
       (snapshot) => {
         const raw = snapshot.val();
         if (!raw) { setLiveStatus('error'); return; }
-        setLiveData({
-          pH:          raw.pH          ?? null,
-          EC:          raw.conductivity != null ? raw.conductivity / 1000 : null,
-          N:           raw.nitrogen     ?? null,
-          P:           raw.phosphorus   ?? null,
-          K:           raw.potassium    ?? null,
-          Temperature: raw.temperature  ?? null,
-          Moisture:    raw.moisture     ?? null,
-        });
+        setLiveData(normalizeFromFirebaseSoil(raw));
         setLastUpdated(new Date());
         setLiveStatus('live');
       },
@@ -928,13 +1015,14 @@ export default function SoilHealth() {
   };
 
   // Enhanced GaugeCard — icon, progress bar, status
-  const GaugeCard = ({ label, value, unit, paramKey, optimal }) => {
-    const status = getParamStatus(paramKey, value);
+  const GaugeCard = ({ label, value, unit, paramKey, optimal, rawValue }) => {
+    const statusValue = rawValue != null ? rawValue : value;
+    const status = getParamStatus(paramKey, statusValue);
     const meta   = PARAM_META[paramKey] || {};
     const rng    = PARAM_RANGES[paramKey];
     let barPct   = null;
-    if (value != null && rng) {
-      barPct = Math.min(100, Math.max(0, ((value - rng.lo) / (rng.hi - rng.lo)) * 100));
+    if (statusValue != null && rng) {
+      barPct = Math.min(100, Math.max(0, ((statusValue - rng.lo) / (rng.hi - rng.lo)) * 100));
     }
     const SC = {
       ok:       { ring: 'border-green-400 bg-green-50',  dot: 'bg-green-500',  text: 'text-green-700',  bar: 'bg-green-500',  label: 'Optimal'  },
@@ -1226,22 +1314,22 @@ export default function SoilHealth() {
         {liveData && liveStatus === 'live' && (
           <div className="relative mt-5 grid grid-cols-4 sm:grid-cols-7 gap-2">
             {[
-              { k: 'pH',          label: 'pH',   v: liveData.pH,          u: ''      },
-              { k: 'EC',          label: 'EC',   v: liveData.EC != null ? Number(liveData.EC).toFixed(3) : null, u: 'mS/cm' },
-              { k: 'N',           label: 'N',    v: liveData.N,           u: 'ppm'   },
-              { k: 'P',           label: 'P',    v: liveData.P,           u: 'ppm'   },
-              { k: 'K',           label: 'K',    v: liveData.K,           u: 'ppm'   },
-              { k: 'Temperature', label: 'Temp', v: liveData.Temperature, u: '°C'    },
-              { k: 'Moisture',    label: 'H₂O',  v: liveData.Moisture,    u: '%'     },
-            ].map(({ k, label, v, u }) => {
-              const s = getParamStatus(k, v);
+              { k: 'pH',          label: 'pH',   raw: liveData.pH,          disp: liveData.pH,          u: '' },
+              { k: 'EC',          label: 'EC',   raw: liveData.EC,          disp: liveData.EC != null ? Number(liveData.EC).toFixed(3) : null, u: 'mS/cm' },
+              { k: 'N',           label: 'N',    raw: liveData.N,           disp: liveData.N,           u: 'ppm' },
+              { k: 'P',           label: 'P',    raw: liveData.P,           disp: liveData.P,           u: 'ppm' },
+              { k: 'K',           label: 'K',    raw: liveData.K,           disp: liveData.K,           u: 'ppm' },
+              { k: 'Temperature', label: 'Temp', raw: liveData.Temperature, disp: format1dpTrunc(liveData.Temperature), u: '°C' },
+              { k: 'Moisture',    label: 'H₂O',  raw: liveData.Moisture,    disp: format1dpTrunc(liveData.Moisture),    u: '%' },
+            ].map(({ k, label, raw, disp, u }) => {
+              const s = getParamStatus(k, raw);
               const dotColor = s === 'ok' ? 'bg-green-400' : s === 'warning' ? 'bg-yellow-400' : s === 'critical' ? 'bg-red-400' : 'bg-white/30';
               return (
                 <div key={k} className="bg-white/15 backdrop-blur-sm rounded-xl px-2 py-2 text-center">
                   <p className="text-xs text-green-100 font-medium">{label}</p>
                   <div className="flex items-center justify-center gap-1 mt-0.5">
                     <span className={`w-1.5 h-1.5 rounded-full ${dotColor}`} />
-                    <p className="text-base font-extrabold">{v != null ? v : '—'}</p>
+                    <p className="text-base font-extrabold">{disp != null ? disp : '—'}</p>
                   </div>
                   <p className="text-xs text-green-200">{u}</p>
                 </div>
@@ -1331,12 +1419,12 @@ export default function SoilHealth() {
             <p className="text-xs text-gray-500 mb-3 ml-14">Live data from your field IoT sensors — refreshed every few seconds.</p>
             <div className="sh-gauge-grid grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
               <GaugeCard label="Soil pH"           value={liveData?.pH}              unit=""       paramKey="pH"          optimal="5.5 – 6.5" />
-              <GaugeCard label="Conductivity (EC)" value={liveData?.EC != null ? Number(liveData.EC).toFixed(3) : null}  unit="mS/cm"  paramKey="EC"          optimal="0.05 – 0.16" />
+              <GaugeCard label="Conductivity (EC)" value={liveData?.EC != null ? Number(liveData.EC).toFixed(3) : null} rawValue={liveData?.EC} unit="mS/cm" paramKey="EC" optimal="0.05 – 0.16" />
               <GaugeCard label="Nitrogen (N)"      value={liveData?.N}               unit="ppm"    paramKey="N"           optimal="Stage-based" />
               <GaugeCard label="Phosphorus (P)"    value={liveData?.P}               unit="ppm"    paramKey="P"           optimal="Stage-based" />
               <GaugeCard label="Potassium (K)"     value={liveData?.K}               unit="ppm"    paramKey="K"           optimal="Stage-based" />
-              <GaugeCard label="Temperature"       value={liveData?.Temperature}     unit="°C"     paramKey="Temperature" optimal="15 – 22°C" />
-              <GaugeCard label="Soil Moisture"     value={liveData?.Moisture}        unit="%"      paramKey="Moisture"    optimal="Stage-based" />
+              <GaugeCard label="Temperature"       value={format1dpTrunc(liveData?.Temperature)} rawValue={liveData?.Temperature} unit="°C" paramKey="Temperature" optimal="15 – 22°C" />
+              <GaugeCard label="Soil Moisture"     value={format1dpTrunc(liveData?.Moisture)}    rawValue={liveData?.Moisture}    unit="%"  paramKey="Moisture"    optimal="Stage-based" />
             </div>
           </div>
 
