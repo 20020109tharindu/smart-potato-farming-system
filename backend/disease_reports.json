@@ -34,7 +34,7 @@
     "lat": 6.599130675207247,
     "lng": 80.81542968750001,
     "disease": "Early Blight",
-    "severity": "Very High",
+    "severity": "Critical",
     "note": "severe 34 perch field",
     "date": "2026-03-08",
     "created_at": "2026-03-08T23:34:20.425715"
@@ -68,26 +68,6 @@
     "note": "",
     "date": "2026-03-09",
     "created_at": "2026-03-09T19:30:49.885496"
-  },
-  {
-    "id": "c2a9fcd1-1fbd-45d8-8fa5-01176cfb26d2",
-    "lat": 8.722218306198739,
-    "lng": 81.11206054687501,
-    "disease": "Healthy",
-    "severity": "Very High",
-    "note": "",
-    "date": "2026-03-09",
-    "created_at": "2026-03-09T19:54:35.431425"
-  },
-  {
-    "id": "63ca93ee-deb7-4dbf-a440-597d8090e837",
-    "lat": 7.8089631205593895,
-    "lng": 81.46362304687501,
-    "disease": "Late Blight",
-    "severity": "Very High",
-    "note": "",
-    "date": "2026-03-10",
-    "created_at": "2026-03-10T09:53:06.813150"
   },
   {
     "id": "fbff7425-8c3b-4422-a2c2-4e0f9a993eee",

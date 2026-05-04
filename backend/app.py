@@ -9,9 +9,7 @@ from flask_cors import CORS
 from utils.predict import predict_one
 from feedback import generate_seed_readiness_feedback
 from dotenv import load_dotenv
-
 warnings.filterwarnings("ignore")
-
 load_dotenv()
 
 app = Flask(__name__)
