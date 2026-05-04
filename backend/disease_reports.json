@@ -1,0 +1,92 @@
+[
+  {
+    "id": "4d5bf7f1-ad72-4334-954a-054ec54fc49f",
+    "lat": 7.29,
+    "lng": 80.63,
+    "disease": "Early Blight",
+    "severity": "High",
+    "note": "2 acre area infected",
+    "date": "2026-03-08",
+    "created_at": "2026-03-08T21:00:27.784779"
+  },
+  {
+    "id": "4b2236e2-3ef2-4a7b-9c72-64f6a9c9bd92",
+    "lat": 7.4441774287713125,
+    "lng": 80.93078613281251,
+    "disease": "Late Blight",
+    "severity": "Moderate",
+    "note": "Severe infection on 2 acres",
+    "date": "2026-03-08",
+    "created_at": "2026-03-08T21:13:59.567570"
+  },
+  {
+    "id": "5bfff968-aba5-4cdb-ae72-30dd05c2287d",
+    "lat": 6.940059334882694,
+    "lng": 80.10681152343751,
+    "disease": "Early Blight",
+    "severity": "Moderate",
+    "note": "",
+    "date": "2026-03-08",
+    "created_at": "2026-03-08T21:14:18.114006"
+  },
+  {
+    "id": "3b572037-c571-4026-a09f-e1a294ba7949",
+    "lat": 6.599130675207247,
+    "lng": 80.81542968750001,
+    "disease": "Early Blight",
+    "severity": "Critical",
+    "note": "severe 34 perch field",
+    "date": "2026-03-08",
+    "created_at": "2026-03-08T23:34:20.425715"
+  },
+  {
+    "id": "9cbebe8b-e19f-4a75-afcc-d1fc40b698d5",
+    "lat": 8.439771599521741,
+    "lng": 80.32104492187501,
+    "disease": "Healthy",
+    "severity": "Low",
+    "note": "overall good",
+    "date": "2026-03-08",
+    "created_at": "2026-03-09T01:40:42.127380"
+  },
+  {
+    "id": "380b4706-a553-4f27-87f8-314002c6363e",
+    "lat": 6.402648405963896,
+    "lng": 81.62841796875001,
+    "disease": "Healthy",
+    "severity": "High",
+    "note": "",
+    "date": "2026-03-08",
+    "created_at": "2026-03-09T02:08:37.696534"
+  },
+  {
+    "id": "cb68be06-ad03-4dbe-8db4-20aeaa3aca91",
+    "lat": 6.195168442930965,
+    "lng": 80.54077148437501,
+    "disease": "Unknown",
+    "severity": "High",
+    "note": "",
+    "date": "2026-03-09",
+    "created_at": "2026-03-09T19:30:49.885496"
+  },
+  {
+    "id": "fbff7425-8c3b-4422-a2c2-4e0f9a993eee",
+    "lat": 6.68643125265198,
+    "lng": 81.18621826171876,
+    "disease": "Late Blight",
+    "severity": "High",
+    "note": "gadded",
+    "date": "2026-03-10",
+    "created_at": "2026-03-10T13:42:19.310548"
+  },
+  {
+    "id": "df0c05f8-993b-4ea5-9880-ac2e628836a9",
+    "lat": 7.645664723491027,
+    "lng": 80.28259277343751,
+    "disease": "Late Blight",
+    "severity": "Critical",
+    "note": "high gh hhgghh",
+    "date": "2026-05-04",
+    "created_at": "2026-05-04T18:35:04.152537"
+  }
+]

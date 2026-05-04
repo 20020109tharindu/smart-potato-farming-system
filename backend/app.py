@@ -1,5 +1,6 @@
 from flask import Flask, request, jsonify
-import os, uuid
+import os, uuid, json, requests
+from datetime import datetime
 import numpy as np
 import pandas as pd
 import pickle
@@ -7,8 +8,9 @@ import warnings
 from flask_cors import CORS
 from utils.predict import predict_one
 from feedback import generate_seed_readiness_feedback
-
+from dotenv import load_dotenv
 warnings.filterwarnings("ignore")
+load_dotenv()
 
 app = Flask(__name__)
 CORS(app)
@@ -574,6 +576,246 @@ def predict_disease():
     finally:
         if os.path.exists(file_path):
             os.remove(file_path)
+
+
+# ── ESP32-CAM capture & predict ──────────────────────────────────────────────
+@app.route("/api/predict-from-esp32", methods=["POST"])
+def predict_from_esp32():
+    """Fetch a JPEG from ESP32-CAM /capture, run disease prediction, return same JSON as /predict-disease."""
+    data = request.get_json(silent=True) or {}
+    esp32_ip = data.get("esp32_ip", "172.20.10.2").strip().rstrip("/")
+    if not esp32_ip.startswith("http"):
+        esp32_ip = "http://" + esp32_ip
+    capture_url = esp32_ip + "/capture"
+
+    file_path = os.path.join(UPLOAD_DIR, f"esp32_{uuid.uuid4().hex}.jpg")
+    try:
+        import urllib.request
+        req = urllib.request.Request(capture_url, headers={"User-Agent": "SmartPotato/1.0"})
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            img_bytes = resp.read()
+        with open(file_path, "wb") as f:
+            f.write(img_bytes)
+
+        model = get_disease_model()
+        img_tensor = preprocess_disease_image(file_path)
+        preds = model.predict(img_tensor, verbose=0)[0]
+        predicted_idx = int(np.argmax(preds))
+        confidence = float(preds[predicted_idx])
+        class_name = (
+            DISEASE_CLASSES[predicted_idx]
+            if predicted_idx < len(DISEASE_CLASSES)
+            else f"Class {predicted_idx}"
+        )
+        rec = DISEASE_RECOMMENDATIONS.get(class_name, DISEASE_RECOMMENDATIONS["Healthy"])
+        class_probs = [
+            {"class": (DISEASE_CLASSES[i] if i < len(DISEASE_CLASSES) else f"Class {i}"),
+             "probability": round(float(preds[i]) * 100, 1)}
+            for i in range(len(preds))
+        ]
+        viz = generate_disease_visualizations(file_path, class_name)
+        return jsonify({
+            "success": True,
+            "predicted_class": class_name,
+            "confidence": round(confidence * 100, 1),
+            "class_probabilities": class_probs,
+            "recommendation": rec,
+            "visualizations": viz,
+            "source": "esp32",
+        })
+    except Exception as e:
+        return jsonify({"error": f"ESP32 capture failed: {e}"}), 500
+    finally:
+        if os.path.exists(file_path):
+            os.remove(file_path)
+
+
+# ── Disease Map reports ───────────────────────────────────────────────────────
+REPORTS_FILE = os.path.join(BASE_DIR, "disease_reports.json")
+
+
+def _load_reports():
+    if os.path.exists(REPORTS_FILE):
+        with open(REPORTS_FILE, "r") as f:
+            return json.load(f)
+    return []
+
+
+def _save_reports(reports):
+    with open(REPORTS_FILE, "w") as f:
+        json.dump(reports, f, indent=2)
+
+
+@app.route("/api/disease-reports", methods=["GET"])
+def get_disease_reports():
+    """Return all disease location reports."""
+    return jsonify(_load_reports())
+
+
+@app.route("/api/disease-reports", methods=["POST"])
+def add_disease_report():
+    """Add a new disease location report."""
+    data = request.get_json(force=True)
+    required = ["lat", "lng", "disease", "severity"]
+    missing = [k for k in required if k not in data]
+    if missing:
+        return jsonify({"error": f"Missing fields: {', '.join(missing)}"}), 400
+
+    report = {
+        "id": str(uuid.uuid4()),
+        "lat": float(data["lat"]),
+        "lng": float(data["lng"]),
+        "disease": data["disease"],
+        "severity": data["severity"],
+        "note": data.get("note", ""),
+        "date": data.get("date", datetime.now().strftime("%Y-%m-%d")),
+        "created_at": datetime.now().isoformat(),
+    }
+    reports = _load_reports()
+    reports.append(report)
+    _save_reports(reports)
+    return jsonify(report), 201
+
+
+@app.route("/api/disease-reports/<report_id>", methods=["DELETE"])
+def delete_disease_report(report_id):
+    """Delete a disease report by id."""
+    reports = _load_reports()
+    filtered = [r for r in reports if r["id"] != report_id]
+    if len(filtered) == len(reports):
+        return jsonify({"error": "Report not found"}), 404
+    _save_reports(filtered)
+    return jsonify({"deleted": report_id})
+
+
+# ── Gemini AI Personalized Recommendations ───────────────────────────────────
+_GEMINI_MODELS = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-2.0-flash-lite"]
+_GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta/models"
+
+
+def _call_gemini(prompt_text):
+    """Call Gemini REST API directly (no deprecated SDK). Returns parsed JSON."""
+    import time as _time
+
+    api_key = os.environ.get("GEMINI_API_KEY", "").strip()
+    if not api_key or api_key == "YOUR_KEY_HERE":
+        raise ValueError(
+            "GEMINI_API_KEY not set. Get a free key from https://aistudio.google.com/apikey "
+            "and add it to backend/.env"
+        )
+
+    payload = {"contents": [{"parts": [{"text": prompt_text}]}]}
+    last_error = None
+
+    for model_name in _GEMINI_MODELS:
+        for attempt in range(2):
+            try:
+                url = f"{_GEMINI_API_BASE}/{model_name}:generateContent?key={api_key}"
+                print(f"[Gemini] Trying {model_name} (attempt {attempt+1}/2)…")
+                resp = requests.post(url, json=payload, timeout=30)
+
+                if resp.status_code == 429:
+                    last_error = f"429 rate limit on {model_name}"
+                    if attempt < 1:
+                        _time.sleep(5)
+                        continue
+                    break  # next model
+
+                resp.raise_for_status()
+                data = resp.json()
+
+                # Extract text from response
+                text = data["candidates"][0]["content"]["parts"][0]["text"].strip()
+
+                # Clean up markdown code blocks
+                if text.startswith("```"):
+                    text = text.split("\n", 1)[1]
+                if text.endswith("```"):
+                    text = text.rsplit("```", 1)[0]
+                text = text.strip()
+
+                return json.loads(text)
+
+            except (requests.exceptions.HTTPError, KeyError, json.JSONDecodeError) as e:
+                last_error = str(e)
+                if "429" in str(getattr(e, 'response', '') or ''):
+                    if attempt < 1:
+                        _time.sleep(5)
+                        continue
+                    break
+                raise
+            except Exception as e:
+                last_error = str(e)
+                err_lower = last_error.lower()
+                if "429" in last_error or "quota" in err_lower:
+                    if attempt < 1:
+                        _time.sleep(5)
+                        continue
+                    break
+                raise
+
+    raise RuntimeError(f"All Gemini models unavailable. Last: {last_error}")
+
+
+@app.route("/api/ai-recommendation", methods=["POST"])
+def ai_recommendation():
+    """
+    Generate personalized fertilizer & treatment recommendations using Gemini AI.
+    Expects JSON: { disease, confidence, disease_area_pct, soil_type?, climate?, growth_stage? }
+    """
+    data = request.get_json(force=True)
+    disease = data.get("disease", "Unknown")
+    confidence = data.get("confidence", 0)
+    disease_area_pct = data.get("disease_area_pct", 0)
+    soil_type = data.get("soil_type", "not specified")
+    climate = data.get("climate", "tropical, Sri Lanka")
+    growth_stage = data.get("growth_stage", "not specified")
+
+    prompt = f"""You are an expert agricultural scientist specializing in potato farming and plant pathology.
+
+A farmer's potato leaf has been analyzed by a deep learning model. Here are the results:
+
+- **Detected Disease**: {disease}
+- **Model Confidence**: {confidence}%
+- **Diseased Leaf Area**: {disease_area_pct}%
+- **Soil Type**: {soil_type}
+- **Climate/Region**: {climate}
+- **Growth Stage**: {growth_stage}
+
+Based on this analysis, provide PERSONALIZED and DETAILED recommendations in the following JSON format ONLY (no markdown, no code blocks, just raw JSON):
+
+{{
+  "ai_action": "Detailed immediate action steps the farmer should take (2-3 sentences)",
+  "ai_fertilizer": "Specific fertilizer recommendation with exact N-P-K ratios and application rates (2-3 sentences)",
+  "ai_nitrogen": {{ "level": "Low|Medium|High|Very High", "detail": "Brief explanation" }},
+  "ai_phosphorus": {{ "level": "Low|Medium|High|Very High", "detail": "Brief explanation" }},
+  "ai_potassium": {{ "level": "Low|Medium|High|Very High", "detail": "Brief explanation" }},
+  "ai_tips": [
+    "Tip 1 - specific and actionable",
+    "Tip 2 - specific and actionable",
+    "Tip 3 - specific and actionable",
+    "Tip 4 - specific and actionable",
+    "Tip 5 - specific and actionable"
+  ],
+  "ai_fungicide": "Specific fungicide name, dosage, and application frequency",
+  "ai_organic_alternative": "Organic/natural treatment option if available",
+  "ai_prevention": "How to prevent this disease in the next crop cycle",
+  "ai_severity_assessment": "Your expert assessment of the severity based on the disease area percentage and confidence"
+}}
+
+Important: Return ONLY valid JSON. No markdown formatting, no code blocks, no extra text."""
+
+    try:
+        ai_rec = _call_gemini(prompt)
+        return jsonify({"success": True, "ai_recommendation": ai_rec})
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+    except RuntimeError as e:
+        return jsonify({"error": str(e)}), 429
+    except json.JSONDecodeError:
+        return jsonify({"success": True, "ai_recommendation": {"ai_action": "AI response could not be parsed.", "ai_tips": []}}), 200
+    except Exception as e:
+        return jsonify({"error": f"Gemini AI error: {str(e)}"}), 500
 
 
 # ── Health check ─────────────────────────────────────────────────────────────
