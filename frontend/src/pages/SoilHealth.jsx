@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { ref, onValue } from 'firebase/database';
-import { collection, addDoc, query, orderBy, limit, getDocs, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, query, where, orderBy, limit, getDocs, serverTimestamp } from 'firebase/firestore';
 import { realtimeDb, db } from '../firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine } from 'recharts';
@@ -98,20 +98,16 @@ const PARAM_RANGES = {
   Moisture:    { lo: 50,   hi: 72,   warn: 8    },
 };
 
-const INITIAL_MANUAL_FORM = {
-  pH: '', EC: '', N: '', P: '', K: '', Temperature: '', Moisture: '',
-};
-
 // Hard sanity limits for live sensor visualization & live prediction
 // (user requirement: keep displayed values within these ranges)
 const LIVE_LIMITS = {
-  pH: 7.25,
-  EC: 0.0299,
-  N: 81.6,
-  P: 182.9,
-  K: 382.10,
-  Temperature: 27.9,
-  Moisture: 76.5,
+  pH: 10,
+  EC: 1,
+  N: 100,
+  P: 500,
+  K: 1000,
+  Temperature: 50,
+  Moisture: 100,
 };
 
 function toFiniteNumber(v) {
@@ -125,21 +121,11 @@ function clamp01Range(value, min, max) {
   return Math.min(max, Math.max(min, value));
 }
 
-function format2dpTrunc(value) {
+function format1dpTrunc(value) {
   const n = toFiniteNumber(value);
   if (n == null) return null;
-  // Truncate (not round) to 2 decimals to keep live UI stable.
-  return (Math.floor(n * 100) / 100).toFixed(2);
-}
-
-async function fetchWithTimeout(url, options, timeoutMs = 15000) {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    return await fetch(url, { ...options, signal: controller.signal });
-  } finally {
-    clearTimeout(timeoutId);
-  }
+  // Truncate (not round) to 1 decimal to keep live UI stable.
+  return (Math.floor(n * 10) / 10).toFixed(1);
 }
 
 function normalizeFromFirebaseSoil(raw) {
@@ -147,8 +133,7 @@ function normalizeFromFirebaseSoil(raw) {
   // Expected by backend/UI: pH, EC (mS/cm), N, P, K (ppm), Temperature (°C), Moisture (%)
   let pH = toFiniteNumber(raw?.pH);
   if (pH != null && pH > 14) pH = pH / 1000; // e.g. 6553.5 -> 6.5535
-  // Keep live pH display within requested bounds (4.3–7.25)
-  pH = clamp01Range(pH, 4.3, LIVE_LIMITS.pH);
+  pH = clamp01Range(pH, 0, LIVE_LIMITS.pH);
 
   let EC = toFiniteNumber(raw?.conductivity);
   if (EC != null) {
@@ -171,13 +156,13 @@ function normalizeFromFirebaseSoil(raw) {
   if (P != null) {
     if (P > 1000) P = P / 1000;   // e.g. 65535 -> 65.535
     else if (P > LIVE_LIMITS.P) P = P / 10;
-    P = clamp01Range(P, 15.09, LIVE_LIMITS.P);
+    P = clamp01Range(P, 0, LIVE_LIMITS.P);
   }
 
   let K = toFiniteNumber(raw?.potassium);
   if (K != null) {
     if (K > 1000) K = K / 1000;   // e.g. 65535 -> 65.535
-    K = clamp01Range(K, 153.05, LIVE_LIMITS.K);
+    K = clamp01Range(K, 0, LIVE_LIMITS.K);
   }
 
   let Temperature = toFiniteNumber(raw?.temperature);
@@ -196,13 +181,13 @@ function normalizeFromFirebaseSoil(raw) {
       // Unscaled Fahrenheit
       Temperature = (Temperature - 32) * (5 / 9);
     }
-    Temperature = clamp01Range(Temperature, 13.0, LIVE_LIMITS.Temperature);
+    Temperature = clamp01Range(Temperature, 0, LIVE_LIMITS.Temperature);
   }
 
   let Moisture = toFiniteNumber(raw?.moisture);
   if (Moisture != null) {
     if (Moisture > 100) Moisture = Moisture / 100; // e.g. 6553.1 -> 65.531%
-    Moisture = clamp01Range(Moisture, 34.3, LIVE_LIMITS.Moisture);
+    Moisture = clamp01Range(Moisture, 0, LIVE_LIMITS.Moisture);
   }
 
   return { pH, EC, N, P, K, Temperature, Moisture };
@@ -537,8 +522,11 @@ export default function SoilHealth() {
   const [predicting,   setPredicting]   = useState(false);
   const [prediction,   setPrediction]   = useState(null);
   const [predError,    setPredError]    = useState(null);
+  const [showPopup,    setShowPopup]    = useState(false);
 
-  const [manualForm, setManualForm] = useState(INITIAL_MANUAL_FORM);
+  const [manualForm, setManualForm] = useState({
+    pH: '', EC: '', N: '', P: '', K: '', Temperature: '', Moisture: '',
+  });
 
   // History & Trends
   const [history,        setHistory]        = useState([]);
@@ -548,24 +536,6 @@ export default function SoilHealth() {
   // PDF flag
   const [generatingPdf, setGeneratingPdf] = useState(false);
   const [predInputs,   setPredInputs]   = useState(null);
-
-  const resetPrediction = useCallback(() => {
-    setPrediction(null);
-    setPredError(null);
-    setPredInputs(null);
-    setShowSuccessModal(false);
-  }, []);
-
-  const focusResults = useCallback(() => {
-    if (resultsRef.current) {
-      resultsRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-    setPulseResults(true);
-    if (pulseTimerRef.current) {
-      clearTimeout(pulseTimerRef.current);
-    }
-    pulseTimerRef.current = setTimeout(() => setPulseResults(false), 1200);
-  }, []);
 
   // Slideshow
   const [slideIdx,   setSlideIdx]   = useState(0);
@@ -604,49 +574,32 @@ export default function SoilHealth() {
     return () => unsubscribe();
   }, []);
 
-  const getHistorySortKey = useCallback((row) => {
-    if (row?.timestamp?.toDate) return row.timestamp.toDate().getTime();
-    const fallback = row?.timestampClient ?? row?.timestamp ?? 0;
-    return Number(fallback) || 0;
-  }, []);
-
-  const sortAndLimitHistory = useCallback((rows) => {
-    return [...rows]
-      .sort((a, b) => getHistorySortKey(b) - getHistorySortKey(a))
-      .slice(0, 20);
-  }, [getHistorySortKey]);
-
   // ----------------------------------------------------------------
   // Firestore — load prediction history
   // ----------------------------------------------------------------
   const loadHistory = useCallback(async () => {
-    if (!currentUser) return;
+    if (!currentUser) { setHistoryLoading(false); return; }
     setHistoryLoading(true);
     try {
       const q = query(
         collection(db, 'soil_predictions'),
+        where('uid', '==', currentUser.uid),
         orderBy('timestamp', 'desc'),
         limit(20),
       );
-      const snap = await getDocs(q);
+      const timeout = new Promise((_, rej) => setTimeout(() => rej(new Error('History load timeout')), 10000));
+      const snap = await Promise.race([getDocs(q), timeout]);
       setHistory(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
     } catch (e) {
       console.error('History load failed:', e);
+    } finally {
+      setHistoryLoading(false);
     }
-    setHistoryLoading(false);
   }, [currentUser]);
 
   useEffect(() => {
-    if (!prediction) return undefined;
-    setShowSuccessModal(true);
-    return undefined;
-  }, [prediction]);
-
-  useEffect(() => () => {
-    if (pulseTimerRef.current) {
-      clearTimeout(pulseTimerRef.current);
-    }
-  }, []);
+    if (activeTab === 'history' || activeTab === 'trends') loadHistory();
+  }, [activeTab, loadHistory]);
 
   // ----------------------------------------------------------------
   // Save prediction to Firestore
@@ -657,7 +610,6 @@ export default function SoilHealth() {
       await addDoc(collection(db, 'soil_predictions'), {
         uid:         currentUser.uid,
         timestamp:   serverTimestamp(),
-        timestampClient: Date.now(),
         inputs:      payload,
         result:      result,
         landAcres:   parseFloat(landAcres) || null,
@@ -673,35 +625,28 @@ export default function SoilHealth() {
   // ----------------------------------------------------------------
   const runPrediction = async (payload) => {
     try {
-      const res  = await fetchWithTimeout('http://127.0.0.1:5000/api/soil/predict', {
+      const res  = await fetch('http://127.0.0.1:5000/api/soil/predict', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
-      }, 15000);
+      });
       const data = await res.json();
       if (data.error) {
         setPredError(data.error);
       } else {
         setPrediction(data);
         setPredInputs(payload);
-        await savePrediction(payload, data);
+        setShowPopup(true);
+        // Save to Firestore in background — don't block UI
+        savePrediction(payload, data).catch(e => console.error('Save failed:', e));
       }
-    } catch (err) {
-      if (err?.name === 'AbortError') {
-        setPredError('Prediction timed out. Please try again.');
-      } else {
-        setPredError('Cannot connect to backend. Make sure the Flask server is running on port 5000.');
-      }
+    } catch {
+      setPredError('Cannot connect to backend. Make sure the Flask server is running on port 5000.');
     }
   };
 
   const handlePredictLive = async () => {
     if (!liveData) return;
-    const acres = parseFloat(landAcres);
-    if (!landAcres || isNaN(acres) || acres <= 0) {
-      setPredError('Please enter your field size (acres) before analyzing.');
-      return;
-    }
     setPredicting(true); setPrediction(null); setPredError(null);
     try {
       await runPrediction({ ...liveData, Growth_Stage: growthStage });
@@ -712,11 +657,6 @@ export default function SoilHealth() {
 
   const handlePredictManual = async (e) => {
     e.preventDefault();
-    const acres = parseFloat(landAcres);
-    if (!landAcres || isNaN(acres) || acres <= 0) {
-      setPredError('Please enter your field size (acres) before analyzing.');
-      return;
-    }
     setPredicting(true); setPrediction(null); setPredError(null);
     try {
       await runPrediction({
@@ -1154,7 +1094,100 @@ export default function SoilHealth() {
   // RENDER
   // ----------------------------------------------------------------
   return (
-    <div className="max-w-5xl mx-auto space-y-6 pb-10">
+    <>
+    <style>{PAGE_CSS}</style>
+
+    {/* ── Success Popup Overlay ── */}
+    {showPopup && prediction && (() => {
+      const popColors = {
+        green:  { bg: '#ecfdf5', ring: '#22c55e', title: 'Excellent Soil!', subtitle: 'Your soil is well-suited for potato cultivation.' },
+        orange: { bg: '#fffbeb', ring: '#f59e0b', title: 'Moderate Soil', subtitle: 'Your soil needs some adjustments for best yield.' },
+        red:    { bg: '#fef2f2', ring: '#ef4444', title: 'Soil Needs Attention', subtitle: 'Significant improvements are recommended.' },
+      };
+      const pc = popColors[prediction.soil_suitability?.color] || popColors.red;
+      const confettiColors = ['#3d7a3a','#5a9e56','#fbbf24','#38bdf8','#c084fc','#f97316','#ec4899'];
+      return (
+        <div className="sh-popup-overlay" onClick={() => setShowPopup(false)}>
+          <div className="sh-popup-card" onClick={e => e.stopPropagation()}>
+            {/* Confetti particles */}
+            {prediction.soil_suitability?.color === 'green' && confettiColors.map((c, i) => (
+              <div
+                key={i}
+                className="sh-popup-confetti"
+                style={{
+                  background: c,
+                  left: `${20 + i * 10}%`,
+                  animationDelay: `${0.3 + i * 0.08}s`,
+                  animationDuration: `${0.8 + Math.random() * 0.5}s`,
+                }}
+              />
+            ))}
+
+            {/* Icon ring */}
+            <div className="sh-popup-icon-ring" style={{ background: pc.bg, border: `3px solid ${pc.ring}` }}>
+              {prediction.soil_suitability?.color === 'green' && (
+                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke={pc.ring} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+              )}
+              {prediction.soil_suitability?.color === 'orange' && (
+                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke={pc.ring} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 9v4" /><circle cx="12" cy="17" r="0.5" fill={pc.ring} />
+                  <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                </svg>
+              )}
+              {prediction.soil_suitability?.color === 'red' && (
+                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke={pc.ring} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              )}
+            </div>
+
+            <h3 style={{ fontFamily: 'Lora, serif', fontSize: '22px', fontWeight: 700, color: '#1e2d1e', marginBottom: '6px' }}>
+              {pc.title}
+            </h3>
+            <p style={{ fontSize: '14px', color: '#6b8069', marginBottom: '6px', lineHeight: 1.5 }}>
+              {pc.subtitle}
+            </p>
+
+            {/* Suitability label + confidence */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', margin: '14px 0 8px', flexWrap: 'wrap' }}>
+              <span style={{
+                background: pc.ring, color: 'white', padding: '6px 18px',
+                borderRadius: '999px', fontSize: '13px', fontWeight: 700,
+              }}>
+                {prediction.soil_suitability?.label}
+              </span>
+              {prediction.confidence != null && (
+                <span style={{
+                  background: pc.bg, color: pc.ring, padding: '6px 14px',
+                  borderRadius: '999px', fontSize: '13px', fontWeight: 700,
+                  border: `1.5px solid ${pc.ring}`,
+                }}>
+                  🎯 {prediction.confidence}% confident
+                </span>
+              )}
+            </div>
+
+            <p style={{ fontSize: '12px', color: '#9ca3af', margin: '12px 0 20px' }}>
+              Scroll down to see full results, fertilizer recommendations & corrective actions.
+            </p>
+
+            {/* Action buttons */}
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', flexWrap: 'wrap' }}>
+              <button className="sh-popup-btn sh-popup-btn-primary" onClick={() => { setShowPopup(false); setTimeout(() => document.querySelector('.sh-result-banner')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100); }}>
+                📊 View Full Results
+              </button>
+              <button className="sh-popup-btn sh-popup-btn-ghost" onClick={() => { setShowPopup(false); setPrediction(null); setPredError(null); setPredInputs(null); }}>
+                🔄 New Analysis
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    })()}
+
+    <div className="sh-page max-w-5xl mx-auto space-y-6 pb-10">
 
       {/* ============================================================
           IMAGE SLIDESHOW
@@ -1254,7 +1287,7 @@ export default function SoilHealth() {
         <div className="absolute -bottom-10 -left-6 w-32 h-32 bg-white/5 rounded-full" />
         <div className="relative flex items-start justify-between flex-wrap gap-4">
           <div className="flex items-center gap-4">
-            <div className="farm-bounce w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center text-3xl shadow-inner">
+            <div className="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center text-3xl shadow-inner">
               🥔
             </div>
             <div>
@@ -1281,13 +1314,13 @@ export default function SoilHealth() {
         {liveData && liveStatus === 'live' && (
           <div className="relative mt-5 grid grid-cols-4 sm:grid-cols-7 gap-2">
             {[
-              { k: 'pH',          label: 'pH',   raw: liveData.pH,          disp: format2dpTrunc(liveData.pH),          u: '' },
-              { k: 'EC',          label: 'EC',   raw: liveData.EC,          disp: format2dpTrunc(liveData.EC),          u: 'mS/cm' },
-              { k: 'N',           label: 'N',    raw: liveData.N,           disp: format2dpTrunc(liveData.N),           u: 'ppm' },
-              { k: 'P',           label: 'P',    raw: liveData.P,           disp: format2dpTrunc(liveData.P),           u: 'ppm' },
-              { k: 'K',           label: 'K',    raw: liveData.K,           disp: format2dpTrunc(liveData.K),           u: 'ppm' },
-              { k: 'Temperature', label: 'Temp', raw: liveData.Temperature, disp: format2dpTrunc(liveData.Temperature), u: '°C' },
-              { k: 'Moisture',    label: 'H₂O',  raw: liveData.Moisture,    disp: format2dpTrunc(liveData.Moisture),    u: '%' },
+              { k: 'pH',          label: 'pH',   raw: liveData.pH,          disp: liveData.pH,          u: '' },
+              { k: 'EC',          label: 'EC',   raw: liveData.EC,          disp: liveData.EC != null ? Number(liveData.EC).toFixed(3) : null, u: 'mS/cm' },
+              { k: 'N',           label: 'N',    raw: liveData.N,           disp: liveData.N,           u: 'ppm' },
+              { k: 'P',           label: 'P',    raw: liveData.P,           disp: liveData.P,           u: 'ppm' },
+              { k: 'K',           label: 'K',    raw: liveData.K,           disp: liveData.K,           u: 'ppm' },
+              { k: 'Temperature', label: 'Temp', raw: liveData.Temperature, disp: format1dpTrunc(liveData.Temperature), u: '°C' },
+              { k: 'Moisture',    label: 'H₂O',  raw: liveData.Moisture,    disp: format1dpTrunc(liveData.Moisture),    u: '%' },
             ].map(({ k, label, raw, disp, u }) => {
               const s = getParamStatus(k, raw);
               const dotColor = s === 'ok' ? 'bg-green-400' : s === 'warning' ? 'bg-yellow-400' : s === 'critical' ? 'bg-red-400' : 'bg-white/30';
@@ -1317,9 +1350,7 @@ export default function SoilHealth() {
               {outOfRangeAlerts.length} Sensor Alert{outOfRangeAlerts.length > 1 ? 's' : ''} — Immediate Attention Needed
             </p>
             <div className="flex flex-wrap gap-2">
-              {outOfRangeAlerts.map(({ key, value, status }) => {
-                const displayValue = format2dpTrunc(value);
-                return (
+              {outOfRangeAlerts.map(({ key, value, status }) => (
                 <span
                   key={key}
                   className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${
@@ -1329,10 +1360,9 @@ export default function SoilHealth() {
                   }`}
                 >
                   <span>{PARAM_META[key]?.icon}</span>
-                  {key}: <strong>{displayValue != null ? displayValue : value}</strong> — {status === 'critical' ? '⛔ Critical' : '⚠️ Warning'}
+                  {key}: <strong>{value}</strong> — {status === 'critical' ? '⛔ Critical' : '⚠️ Warning'}
                 </span>
-                );
-              })}
+              ))}
             </div>
           </div>
         </div>
@@ -1341,19 +1371,17 @@ export default function SoilHealth() {
       {/* ============================================================
           TABS
           ============================================================ */}
-      <div className="flex gap-1 bg-gray-100 rounded-2xl p-1.5 overflow-x-auto">
+      <div className="sh-section sh-tabs overflow-x-auto">
         {TABS.map((tab) => (
           <button
             key={tab.key}
             onClick={() => { setActiveTab(tab.key); setPrediction(null); setPredError(null); }}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap transition-all duration-200 flex-1 justify-center ${
-              activeTab === tab.key
-                ? 'bg-white text-green-700 shadow-sm'
-                : 'text-gray-500 hover:text-gray-700'
+            className={`sh-tab ${
+              activeTab === tab.key ? 'sh-tab-active' : ''
             }`}
           >
             <span>{tab.icon}</span>
-            <span className="uppercase tracking-wide">{tab.label}</span>
+            {tab.label}
           </button>
         ))}
       </div>
@@ -1381,10 +1409,15 @@ export default function SoilHealth() {
 
           {/* Gauge cards */}
           <div>
-            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3 flex items-center gap-2">
-              <span>📡</span> Real-Time Sensor Readings
-            </p>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+            <div className="sh-sec-head">
+              <div className="sh-sec-icon">📡</div>
+              <div>
+                <p className="text-sm font-bold text-gray-700">Real-Time Sensor Readings</p>
+                <div className="sh-sec-line" />
+              </div>
+            </div>
+            <p className="text-xs text-gray-500 mb-3 ml-14">Live data from your field IoT sensors — refreshed every few seconds.</p>
+            <div className="sh-gauge-grid grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
               <GaugeCard label="Soil pH"           value={liveData?.pH}              unit=""       paramKey="pH"          optimal="5.5 – 6.5" />
               <GaugeCard label="Conductivity (EC)" value={liveData?.EC != null ? Number(liveData.EC).toFixed(3) : null} rawValue={liveData?.EC} unit="mS/cm" paramKey="EC" optimal="0.05 – 0.16" />
               <GaugeCard label="Nitrogen (N)"      value={liveData?.N}               unit="ppm"    paramKey="N"           optimal="Stage-based" />
@@ -1396,10 +1429,13 @@ export default function SoilHealth() {
           </div>
 
           {/* Growth stage selector */}
-          <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-xl">🌱</span>
-              <h2 className="text-sm font-bold text-gray-800">Select Your Crop Growth Stage</h2>
+          <div className="sh-content-card">
+            <div className="sh-sec-head">
+              <div className="sh-sec-icon">🌱</div>
+              <div>
+                <h2 className="text-sm font-bold text-gray-800">Select Your Crop Growth Stage</h2>
+                <div className="sh-sec-line" />
+              </div>
             </div>
             <p className="text-xs text-gray-500 mb-4 ml-8">
               IoT sensors cannot detect the crop stage — please select based on your current field conditions.
@@ -1408,7 +1444,7 @@ export default function SoilHealth() {
               {GROWTH_STAGES.map((s, idx) => (
                 <button
                   key={s.value}
-                  onClick={() => { setGrowthStage(s.value); resetPrediction(); }}
+                  onClick={() => setGrowthStage(s.value)}
                   className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 text-center transition-all duration-200 hover:shadow-sm ${
                     growthStage === s.value
                       ? 'bg-green-600 text-white border-green-600 shadow-md shadow-green-200'
@@ -1426,10 +1462,13 @@ export default function SoilHealth() {
           </div>
 
           {/* Land area input */}
-          <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-xl">🌾</span>
-              <h2 className="text-sm font-bold text-gray-800">Your Field Size</h2>
+          <div className="sh-content-card">
+            <div className="sh-sec-head">
+              <div className="sh-sec-icon">🌾</div>
+              <div>
+                <h2 className="text-sm font-bold text-gray-800">Your Field Size</h2>
+                <div className="sh-sec-line" />
+              </div>
             </div>
             <p className="text-xs text-gray-500 mb-3 ml-8">
               Enter your land area to calculate the <strong>total fertilizer</strong> needed for your entire field.
@@ -1478,10 +1517,13 @@ export default function SoilHealth() {
       {activeTab === 'manual' && (
         <form onSubmit={handlePredictManual} className="sh-section space-y-5">
 
-          <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-xl">✏️</span>
-              <h2 className="text-sm font-bold text-gray-800">Enter Soil Parameters Manually</h2>
+          <div className="sh-content-card">
+            <div className="sh-sec-head">
+              <div className="sh-sec-icon">✏️</div>
+              <div>
+                <h2 className="text-sm font-bold text-gray-800">Enter Soil Parameters Manually</h2>
+                <div className="sh-sec-line" />
+              </div>
             </div>
             <p className="text-xs text-gray-500 mb-5 ml-8">
               Use these fields if sensor data is unavailable. EC (Electrical Conductivity) is the same as soil conductivity — enter in mS/cm.
@@ -1505,10 +1547,7 @@ export default function SoilHealth() {
                   <input
                     type="number" step={f.step} placeholder={f.placeholder} required
                     value={manualForm[f.key]}
-                    onChange={(e) => {
-                      resetPrediction();
-                      setManualForm((prev) => ({ ...prev, [f.key]: e.target.value }));
-                    }}
+                    onChange={(e) => setManualForm({ ...manualForm, [f.key]: e.target.value })}
                     className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
                   />
                   <p className="text-xs text-gray-400 mt-1">{f.hint}</p>
@@ -1529,7 +1568,7 @@ export default function SoilHealth() {
               {GROWTH_STAGES.map((s, idx) => (
                 <button
                   type="button" key={s.value}
-                  onClick={() => { setGrowthStage(s.value); resetPrediction(); }}
+                  onClick={() => setGrowthStage(s.value)}
                   className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 text-center transition-all duration-200 hover:shadow-sm ${
                     growthStage === s.value
                       ? 'bg-green-600 text-white border-green-600 shadow-md shadow-green-200'
@@ -1598,7 +1637,7 @@ export default function SoilHealth() {
           TAB 3 — PREDICTION HISTORY
           ============================================================ */}
       {activeTab === 'history' && (
-        <div className="space-y-4">
+        <div className="sh-section space-y-4">
           <div className="flex items-center justify-between">
             <div>
               <div className="sh-sec-head">
@@ -1626,7 +1665,7 @@ export default function SoilHealth() {
           )}
 
           {!historyLoading && history.length === 0 && (
-            <div className="rounded-2xl border border-dashed border-emerald-100 bg-white/70 text-center py-14">
+            <div className="rounded-2xl border border-dashed border-gray-200 bg-gray-50 text-center py-14">
               <div className="text-5xl mb-3">📊</div>
               <p className="text-sm font-semibold text-gray-500">No predictions yet</p>
               <p className="text-xs text-gray-400 mt-1">Run your first analysis on the Live or Manual tab.</p>
@@ -1634,7 +1673,7 @@ export default function SoilHealth() {
           )}
 
           {!historyLoading && history.length > 0 && (
-            <div className="overflow-x-auto rounded-2xl border border-emerald-100 bg-white/80 backdrop-blur-sm shadow-sm">
+            <div className="overflow-x-auto rounded-2xl border border-gray-200 shadow-sm">
               <table className="w-full text-xs">
                 <thead className="bg-gradient-to-r from-green-50 to-emerald-50 text-gray-500 uppercase tracking-wide border-b border-gray-200">
                   <tr>
@@ -1653,9 +1692,7 @@ export default function SoilHealth() {
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {history.map((h, i) => {
-                    const ts = h.timestamp?.toDate
-                      ? h.timestamp.toDate()
-                      : new Date(h.timestampClient || h.timestamp || Date.now());
+                    const ts = h.timestamp?.toDate ? h.timestamp.toDate() : new Date(h.timestamp);
                     const colorMap = {
                       green:  'bg-green-100 text-green-700 border-green-300',
                       orange: 'bg-orange-100 text-orange-700 border-orange-300',
@@ -1694,9 +1731,9 @@ export default function SoilHealth() {
           TAB 4 — TRENDS CHART
           ============================================================ */}
       {activeTab === 'trends' && (
-        <div className="space-y-5">
-          <div className="flex items-center gap-2">
-            <span className="text-xl">📈</span>
+        <div className="sh-section space-y-5">
+          <div className="sh-sec-head">
+            <div className="sh-sec-icon">📈</div>
             <div>
               <h2 className="text-sm font-bold text-gray-800">Parameter Trend Over Time</h2>
               <p className="text-xs text-gray-500 mt-0.5">
@@ -1737,7 +1774,7 @@ export default function SoilHealth() {
           )}
 
           {!historyLoading && history.length < 2 && (
-            <div className="rounded-2xl border border-dashed border-emerald-100 bg-white/70 text-center py-14">
+            <div className="rounded-2xl border border-dashed border-gray-200 bg-gray-50 text-center py-14">
               <div className="text-5xl mb-3">📊</div>
               <p className="text-sm font-semibold text-gray-500">Not enough data yet</p>
               <p className="text-xs text-gray-400 mt-1">Run at least 2 analyses to see a trend chart.</p>
@@ -1749,9 +1786,7 @@ export default function SoilHealth() {
             const chartData = [...history]
               .reverse()
               .map((h) => {
-                const ts = h.timestamp?.toDate
-                  ? h.timestamp.toDate()
-                  : new Date(h.timestampClient || h.timestamp || Date.now());
+                const ts = h.timestamp?.toDate ? h.timestamp.toDate() : new Date(h.timestamp);
                 return {
                   name: ts.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ' ' + ts.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
                   value: parseFloat(h.inputs?.[trendParam]) || null,
@@ -1760,7 +1795,7 @@ export default function SoilHealth() {
             const lo = PARAM_RANGES[trendParam]?.lo;
             const hi = PARAM_RANGES[trendParam]?.hi;
             return (
-              <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
+              <div className="sh-content-card">
                 <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">{trendParam} over time</p>
                 <ResponsiveContainer width="100%" height={280}>
                   <LineChart data={chartData} margin={{ top: 5, right: 20, left: 0, bottom: 60 }}>
@@ -1802,7 +1837,7 @@ export default function SoilHealth() {
           PREDICTION RESULTS
           ============================================================ */}
       {prediction && (
-        <div className="space-y-4">
+        <div className="sh-section sh-result-banner space-y-4">
 
           {/* Suitability banner */}
           {(() => {
@@ -1823,6 +1858,11 @@ export default function SoilHealth() {
                       </p>
                       <div className="flex items-center gap-3 flex-wrap mb-2">
                         <SuitabilityBadge result={prediction.soil_suitability} />
+                        {prediction.confidence != null && (
+                          <span className="flex items-center gap-1.5 text-sm text-gray-600 bg-white/70 px-3 py-1 rounded-full border border-gray-200">
+                            🎯 Confidence: <strong>{prediction.confidence}%</strong>
+                          </span>
+                        )}
                       </div>
                       <p className="text-sm text-gray-700 leading-relaxed">{prediction.soil_suitability.description}</p>
                     </div>
