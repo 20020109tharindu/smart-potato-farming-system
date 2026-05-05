@@ -88,5 +88,15 @@
     "note": "high gh hhgghh",
     "date": "2026-05-04",
     "created_at": "2026-05-04T18:35:04.152537"
+  },
+  {
+    "id": "29652e86-6490-480a-bef0-a3cb9e297eec",
+    "lat": 8.03747339584114,
+    "lng": 80.94726562500001,
+    "disease": "Healthy",
+    "severity": "High",
+    "note": "have good heathy \n",
+    "date": "2026-05-05",
+    "created_at": "2026-05-05T08:59:57.497707"
   }
 ]

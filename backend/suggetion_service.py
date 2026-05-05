@@ -2,9 +2,26 @@ import json
 import re
 import requests
 import os
+import time
 
-GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "AIzaSyAEtSAV3afV5EVsoyE8v2KtMUqjjnG838k")
-GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent"
+_GEMINI_MODELS = [
+    "gemini-2.5-flash",
+    "gemini-2.0-flash",
+    "gemini-2.0-flash-lite",
+    "gemini-1.5-flash",
+    "gemini-1.5-pro",
+]
+_GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta/models"
+
+
+def _get_api_key():
+    key = os.environ.get("GEMINI_API_KEY", "").strip()
+    if not key or key == "YOUR_KEY_HERE":
+        raise ValueError(
+            "GEMINI_API_KEY not set. Get a free key from https://aistudio.google.com/apikey "
+            "and add it to backend/.env"
+        )
+    return key
 
 
 def _safe_json_extract(text: str):
@@ -30,6 +47,7 @@ def _safe_json_extract(text: str):
 
 
 def call_gemini_json(prompt, max_tokens=900):
+    api_key = _get_api_key()
     body = {
         "contents": [{"parts": [{"text": prompt}]}],
         "generationConfig": {
@@ -38,27 +56,36 @@ def call_gemini_json(prompt, max_tokens=900):
         }
     }
 
-    r = requests.post(
-        f"{GEMINI_URL}?key={GEMINI_API_KEY}",
-        json=body,
-        timeout=40
-    )
+    last_error = None
+    for model_name in _GEMINI_MODELS:
+        for attempt in range(2):
+            url = f"{_GEMINI_API_BASE}/{model_name}:generateContent?key={api_key}"
+            r = requests.post(url, json=body, timeout=40)
 
-    if r.status_code != 200:
-        raise Exception(f"Gemini API error: {r.text}")
+            if r.status_code in (403, 404):
+                last_error = f"{r.status_code} on {model_name}"
+                break
+            if r.status_code == 429:
+                last_error = f"429 rate limit on {model_name}"
+                if attempt < 1:
+                    time.sleep(5)
+                    continue
+                break
+            if r.status_code != 200:
+                last_error = f"Gemini API error: {r.text}"
+                break
 
-    raw_text = r.json()["candidates"][0]["content"]["parts"][0]["text"]
-    raw_text = raw_text.replace("```json", "").replace("```", "").strip()
+            raw_text = r.json()["candidates"][0]["content"]["parts"][0]["text"]
+            raw_text = raw_text.replace("```json", "").replace("```", "").strip()
 
-    parsed = _safe_json_extract(raw_text)
+            parsed = _safe_json_extract(raw_text)
+            if parsed is None:
+                last_error = "Gemini returned invalid JSON"
+                break
 
-    if parsed is None:
-        raise ValueError(
-            "Gemini did not return valid JSON.\n"
-            f"RAW OUTPUT:\n{raw_text}"
-        )
+            return parsed
 
-    return parsed
+    raise Exception(f"Gemini API error: {last_error}")
 
 
 def generate_farmer_explanation(variety, strategy, roi, net_profit):
@@ -129,11 +156,9 @@ Return ONLY JSON.
             }
         }
 
-        r = requests.post(
-            f"{GEMINI_URL}?key={GEMINI_API_KEY}",
-            json=text_body,
-            timeout=40
-        )
+        api_key = _get_api_key()
+        url = f"{_GEMINI_API_BASE}/{_GEMINI_MODELS[0]}:generateContent?key={api_key}"
+        r = requests.post(url, json=text_body, timeout=40)
 
         raw_text = r.json()["candidates"][0]["content"]["parts"][0]["text"]
 
