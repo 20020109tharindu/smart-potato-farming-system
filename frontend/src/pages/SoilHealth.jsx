@@ -132,6 +132,12 @@ function format2dpTrunc(value) {
   return (Math.floor(n * 100) / 100).toFixed(2);
 }
 
+function format1dpTrunc(value) {
+  const n = toFiniteNumber(value);
+  if (n == null) return null;
+  return (Math.floor(n * 10) / 10).toFixed(1);
+}
+
 async function fetchWithTimeout(url, options, timeoutMs = 15000) {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
@@ -537,6 +543,12 @@ export default function SoilHealth() {
   const [predicting,   setPredicting]   = useState(false);
   const [prediction,   setPrediction]   = useState(null);
   const [predError,    setPredError]    = useState(null);
+  const [showPopup,    setShowPopup]    = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [pulseResults, setPulseResults] = useState(false);
+
+  const resultsRef = useRef(null);
+  const pulseTimerRef = useRef(null);
 
   const [manualForm, setManualForm] = useState(INITIAL_MANUAL_FORM);
 
@@ -1154,6 +1166,7 @@ export default function SoilHealth() {
   // RENDER
   // ----------------------------------------------------------------
   return (
+    <>
     <div className="max-w-5xl mx-auto space-y-6 pb-10">
 
       {/* ============================================================
