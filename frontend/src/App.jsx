@@ -17,7 +17,7 @@ function App() {
   const [backendMessage, setBackendMessage] = useState("Loading...");
 
   useEffect(() => {
-    fetch("http://127.0.0.1:5000/api/health")
+    fetch("http://127.0.0.1:5001/api/health")
       .then((res) => res.json())
       .then((data) => setBackendMessage(data.message))
       .catch(() => setBackendMessage("Cannot reach backend"));

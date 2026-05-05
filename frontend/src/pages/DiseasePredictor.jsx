@@ -10,9 +10,9 @@ import {
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
-const API_URL        = "http://127.0.0.1:5000/api/predict-disease";
-const ESP32_API_URL  = "http://127.0.0.1:5000/api/predict-from-esp32";
-const REPORTS_API    = "http://127.0.0.1:5000/api/disease-reports";
+const API_URL        = "http://127.0.0.1:5001/api/predict-disease";
+const ESP32_API_URL  = "http://127.0.0.1:5001/api/predict-from-esp32";
+const REPORTS_API    = "http://127.0.0.1:5001/api/disease-reports";
 const ESP32_BASE_URL = "http://10.81.119.16";
 const ESP32_STREAM_URL = "http://10.81.119.16:81/stream";
 const ESP32_CAPTURE_URL = "http://10.81.119.16/capture";
@@ -364,7 +364,7 @@ export default function DiseasePredictor() {
     setAiError(null);
     setAiRec(null);
     try {
-      const res = await fetch("http://127.0.0.1:5000/api/ai-recommendation", {
+      const res = await fetch("http://127.0.0.1:5001/api/ai-recommendation", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

@@ -494,7 +494,7 @@ const InputPage = () => {
         hands_on_money_lkr: parseFloat(formData.hands_on_money_lkr),
       };
       const { data } = await axios.post(
-        "http://127.0.0.1:5000/potato_analyze",
+        "http://127.0.0.1:5001/potato_analyze",
         payload,
       );
       sessionStorage.setItem("analysisResult", JSON.stringify(data));

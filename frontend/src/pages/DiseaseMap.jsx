@@ -10,7 +10,7 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
 /* ── API base ─────────────────────────────────────────────────────────────── */
-const API = "http://127.0.0.1:5000/api/disease-reports";
+const API = "http://127.0.0.1:5001/api/disease-reports";
 
 /* ── Marker colours per disease type ──────────────────────────────────────── */
 const COLORS = {
