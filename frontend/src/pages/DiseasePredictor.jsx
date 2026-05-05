@@ -742,23 +742,15 @@ export default function DiseasePredictor() {
               <h2 className="font-semibold text-gray-800">Upload Leaf</h2>
               <p className="text-xs text-gray-500">Select a high-quality image</p>
             </div>
-            {/* Tab toggle */}
+            {/* Tab toggle (upload only) */}
             <div className="flex bg-gray-100 rounded-lg p-1 text-xs font-semibold">
               <button
                 onClick={() => setLiveMode(false)}
                 className={`px-3 py-1.5 rounded-md transition-all ${
-                  !liveMode ? "bg-white text-emerald-700 shadow" : "text-gray-500 hover:text-gray-700"
+                  "bg-white text-emerald-700 shadow"
                 }`}
               >
                 📁 Upload
-              </button>
-              <button
-                onClick={() => { setLiveMode(true); setStreamKey(k => k + 1); }}
-                className={`px-3 py-1.5 rounded-md transition-all ${
-                  liveMode ? "bg-white text-blue-600 shadow" : "text-gray-500 hover:text-gray-700"
-                }`}
-              >
-                📹 Live
               </button>
             </div>
           </div>
@@ -852,44 +844,7 @@ export default function DiseasePredictor() {
               )}
             </div>
 
-            {/* ── ESP32-CAM section ── */}
-            <div className="mt-4 pt-4 border-t border-gray-100">
-              <div className="flex items-center gap-2 mb-3">
-                <span className="text-base">📷</span>
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">ESP32-CAM</p>
-              </div>
-              <div className="flex gap-2 mb-2">
-                <input
-                  type="text"
-                  value={esp32Ip}
-                  readOnly
-                  disabled
-                  className="flex-1 text-sm border border-gray-200 rounded-lg px-3 py-2 bg-gray-50 text-gray-500 font-mono"
-                />
-                <button
-                  onClick={() => { setLiveMode(true); setStreamKey(k => k + 1); setError(null); }}
-                  className="px-3 py-2 text-xs rounded-lg border border-blue-200 text-blue-600 hover:bg-blue-50 font-semibold whitespace-nowrap"
-                  title="Open live stream"
-                >
-                  📺 Stream
-                </button>
-              </div>
-              <button
-                onClick={captureFromESP32}
-                disabled={esp32Loading || loading}
-                className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl font-semibold text-sm transition-all
-                  ${ esp32Loading || loading
-                    ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                    : "bg-blue-600 hover:bg-blue-700 text-white shadow-md"}`}
-              >
-                {esp32Loading ? (
-                  <><svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-                  </svg>Capturing...</>
-                ) : <>📸 Capture &amp; Analyze from ESP32-CAM</>}
-              </button>
-            </div>
+            {/* ESP32-CAM removed from UI */}
           </div>
 
           {/* Detectable conditions (shown when no result) */}
