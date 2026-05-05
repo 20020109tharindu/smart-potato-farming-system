@@ -689,7 +689,13 @@ def delete_disease_report(report_id):
 
 
 # ── Gemini AI Personalized Recommendations ───────────────────────────────────
-_GEMINI_MODELS = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-2.0-flash-lite"]
+_GEMINI_MODELS = [
+    "gemini-2.5-flash",
+    "gemini-2.0-flash",
+    "gemini-2.0-flash-lite",
+    "gemini-1.5-flash",
+    "gemini-1.5-pro",
+]
 _GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta/models"
 
 
@@ -714,12 +720,16 @@ def _call_gemini(prompt_text):
                 print(f"[Gemini] Trying {model_name} (attempt {attempt+1}/2)…")
                 resp = requests.post(url, json=payload, timeout=30)
 
+                if resp.status_code in (403, 404):
+                    last_error = f"{resp.status_code} on {model_name}"
+                    break
+
                 if resp.status_code == 429:
                     last_error = f"429 rate limit on {model_name}"
                     if attempt < 1:
                         _time.sleep(5)
                         continue
-                    break  # next model
+                    break
 
                 resp.raise_for_status()
                 data = resp.json()
@@ -738,12 +748,13 @@ def _call_gemini(prompt_text):
 
             except (requests.exceptions.HTTPError, KeyError, json.JSONDecodeError) as e:
                 last_error = str(e)
-                if "429" in str(getattr(e, 'response', '') or ''):
+                err_lower = last_error.lower()
+                if "429" in last_error or "quota" in err_lower:
                     if attempt < 1:
                         _time.sleep(5)
                         continue
                     break
-                raise
+                break
             except Exception as e:
                 last_error = str(e)
                 err_lower = last_error.lower()
@@ -752,7 +763,7 @@ def _call_gemini(prompt_text):
                         _time.sleep(5)
                         continue
                     break
-                raise
+                break
 
     raise RuntimeError(f"All Gemini models unavailable. Last: {last_error}")
 
