@@ -534,9 +534,11 @@ export default function SoilHealth() {
 
   const [growthStage,  setGrowthStage]  = useState(1);
   const [landAcres,    setLandAcres]    = useState('');
+  const [landAcresError, setLandAcresError] = useState('');
   const [predicting,   setPredicting]   = useState(false);
   const [prediction,   setPrediction]   = useState(null);
   const [predError,    setPredError]    = useState(null);
+  const [showPredictionModal, setShowPredictionModal] = useState(false);
 
   const [manualForm, setManualForm] = useState(INITIAL_MANUAL_FORM);
 
@@ -553,18 +555,6 @@ export default function SoilHealth() {
     setPrediction(null);
     setPredError(null);
     setPredInputs(null);
-    setShowSuccessModal(false);
-  }, []);
-
-  const focusResults = useCallback(() => {
-    if (resultsRef.current) {
-      resultsRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-    setPulseResults(true);
-    if (pulseTimerRef.current) {
-      clearTimeout(pulseTimerRef.current);
-    }
-    pulseTimerRef.current = setTimeout(() => setPulseResults(false), 1200);
   }, []);
 
   // Slideshow
@@ -629,24 +619,12 @@ export default function SoilHealth() {
         limit(20),
       );
       const snap = await getDocs(q);
-      setHistory(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+      setHistory(sortAndLimitHistory(snap.docs.map((d) => ({ id: d.id, ...d.data() }))));
     } catch (e) {
       console.error('History load failed:', e);
     }
     setHistoryLoading(false);
-  }, [currentUser]);
-
-  useEffect(() => {
-    if (!prediction) return undefined;
-    setShowSuccessModal(true);
-    return undefined;
-  }, [prediction]);
-
-  useEffect(() => () => {
-    if (pulseTimerRef.current) {
-      clearTimeout(pulseTimerRef.current);
-    }
-  }, []);
+  }, [currentUser, sortAndLimitHistory]);
 
   // ----------------------------------------------------------------
   // Save prediction to Firestore
@@ -684,7 +662,8 @@ export default function SoilHealth() {
       } else {
         setPrediction(data);
         setPredInputs(payload);
-        await savePrediction(payload, data);
+        setShowPredictionModal(true);
+        savePrediction(payload, data).catch((e) => console.error('Save failed:', e));
       }
     } catch (err) {
       if (err?.name === 'AbortError') {
@@ -695,13 +674,19 @@ export default function SoilHealth() {
     }
   };
 
+  const closeModal = () => {
+    setShowPredictionModal(false);
+  };
+
   const handlePredictLive = async () => {
     if (!liveData) return;
     const acres = parseFloat(landAcres);
     if (!landAcres || isNaN(acres) || acres <= 0) {
+      setLandAcresError('Field size is required.');
       setPredError('Please enter your field size (acres) before analyzing.');
       return;
     }
+    setLandAcresError('');
     setPredicting(true); setPrediction(null); setPredError(null);
     try {
       await runPrediction({ ...liveData, Growth_Stage: growthStage });
@@ -714,9 +699,11 @@ export default function SoilHealth() {
     e.preventDefault();
     const acres = parseFloat(landAcres);
     if (!landAcres || isNaN(acres) || acres <= 0) {
+      setLandAcresError('Field size is required.');
       setPredError('Please enter your field size (acres) before analyzing.');
       return;
     }
+    setLandAcresError('');
     setPredicting(true); setPrediction(null); setPredError(null);
     try {
       await runPrediction({
@@ -1155,6 +1142,7 @@ export default function SoilHealth() {
   // ----------------------------------------------------------------
   return (
     <div className="max-w-5xl mx-auto space-y-6 pb-10">
+      <style>{PAGE_CSS}</style>
 
       {/* ============================================================
           IMAGE SLIDESHOW
@@ -1390,8 +1378,8 @@ export default function SoilHealth() {
               <GaugeCard label="Nitrogen (N)"      value={liveData?.N}               unit="ppm"    paramKey="N"           optimal="Stage-based" />
               <GaugeCard label="Phosphorus (P)"    value={liveData?.P}               unit="ppm"    paramKey="P"           optimal="Stage-based" />
               <GaugeCard label="Potassium (K)"     value={liveData?.K}               unit="ppm"    paramKey="K"           optimal="Stage-based" />
-              <GaugeCard label="Temperature"       value={format1dpTrunc(liveData?.Temperature)} rawValue={liveData?.Temperature} unit="°C" paramKey="Temperature" optimal="15 – 22°C" />
-              <GaugeCard label="Soil Moisture"     value={format1dpTrunc(liveData?.Moisture)}    rawValue={liveData?.Moisture}    unit="%"  paramKey="Moisture"    optimal="Stage-based" />
+              <GaugeCard label="Temperature"       value={format2dpTrunc(liveData?.Temperature)} rawValue={liveData?.Temperature} unit="°C" paramKey="Temperature" optimal="15 – 22°C" />
+              <GaugeCard label="Soil Moisture"     value={format2dpTrunc(liveData?.Moisture)}    rawValue={liveData?.Moisture}    unit="%"  paramKey="Moisture"    optimal="Stage-based" />
             </div>
           </div>
 
@@ -1434,16 +1422,25 @@ export default function SoilHealth() {
             <p className="text-xs text-gray-500 mb-3 ml-8">
               Enter your land area to calculate the <strong>total fertilizer</strong> needed for your entire field.
             </p>
-            <div className="flex items-center gap-3 ml-8">
+            <div className="flex items-center gap-3 ml-8 flex-wrap">
               <div className="relative">
                 <input
-                  type="number" min="0.1" step="0.1" placeholder="e.g. 2.5"
+                  type="number" min="0.1" step="0.1" placeholder="e.g. 2.5" required
                   value={landAcres}
-                  onChange={(e) => setLandAcres(e.target.value)}
-                  className="w-36 pl-3 pr-14 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 font-semibold"
+                  onChange={(e) => {
+                    setLandAcres(e.target.value);
+                    if (e.target.value && parseFloat(e.target.value) > 0) {
+                      setLandAcresError('');
+                    }
+                  }}
+                  aria-invalid={Boolean(landAcresError)}
+                  className={`w-36 pl-3 pr-14 py-2.5 text-sm border rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 font-semibold ${landAcresError ? 'border-red-400 bg-red-50' : 'border-gray-200'}`}
                 />
                 <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 font-medium">acres</span>
               </div>
+              {landAcresError && (
+                <span className="w-full text-xs text-red-600 font-semibold ml-0.5">{landAcresError}</span>
+              )}
               {landAcres && !isNaN(landAcres) && parseFloat(landAcres) > 0 && (
                 <span className="flex items-center gap-1.5 text-xs text-green-700 bg-green-50 border border-green-200 px-3 py-1.5 rounded-full font-semibold">
                   ✅ {landAcres} acre{parseFloat(landAcres) !== 1 ? 's' : ''} — totals will be shown
@@ -1799,196 +1796,197 @@ export default function SoilHealth() {
       )}
 
       {/* ============================================================
-          PREDICTION RESULTS
+          PREDICTION RESULTS MODAL
           ============================================================ */}
-      {prediction && (
-        <div className="space-y-4">
+      {showPredictionModal && prediction && (
+        <>
+          {/* Overlay */}
+          <div
+            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 transition-all duration-200 opacity-100"
+            onClick={closeModal}
+          />
+          {/* Modal Card */}
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto transition-all duration-200 scale-100 opacity-100">
+              {/* Header with Close Button */}
+              <div className="sticky top-0 bg-gradient-to-r from-green-50 to-emerald-50 border-b border-green-200 px-6 py-5 flex items-center justify-between">
+                <h2 className="text-xl font-bold text-gray-800">🌾 Soil Analysis Results</h2>
+                <button
+                  onClick={closeModal}
+                  className="flex items-center justify-center w-9 h-9 rounded-full bg-white hover:bg-gray-100 text-gray-600 hover:text-gray-800 transition-all duration-200 shadow-sm hover:shadow-md"
+                  aria-label="Close modal"
+                >
+                  <span className="text-xl font-bold">✕</span>
+                </button>
+              </div>
 
-          {/* Suitability banner */}
-          {(() => {
-            const styles = {
-              green:  { banner: 'bg-gradient-to-br from-green-50 to-emerald-50 border-green-300', emoji: '🎉' },
-              orange: { banner: 'bg-gradient-to-br from-orange-50 to-amber-50 border-orange-300', emoji: '📋' },
-              red:    { banner: 'bg-gradient-to-br from-red-50 to-rose-50 border-red-300',         emoji: '🚨' },
-            };
-            const s = styles[prediction.soil_suitability.color] || styles.red;
-            return (
-              <div className={`rounded-2xl border-2 p-6 ${s.banner}`}>
-                <div className="flex items-start justify-between flex-wrap gap-4">
-                  <div className="flex items-start gap-4">
-                    <div className="text-4xl">{s.emoji}</div>
-                    <div>
-                      <p className="text-xs font-bold uppercase tracking-widest text-gray-500 mb-2">
-                        AI Analysis Result · {prediction.growth_stage.label}
-                      </p>
-                      <div className="flex items-center gap-3 flex-wrap mb-2">
-                        <SuitabilityBadge result={prediction.soil_suitability} />
+              {/* Modal Content */}
+              <div className="p-6 space-y-5">
+
+                {/* Suitability banner */}
+                {(() => {
+                  const styles = {
+                    green:  { banner: 'bg-gradient-to-br from-green-50 to-emerald-50 border-green-300', emoji: '🎉' },
+                    orange: { banner: 'bg-gradient-to-br from-orange-50 to-amber-50 border-orange-300', emoji: '📋' },
+                    red:    { banner: 'bg-gradient-to-br from-red-50 to-rose-50 border-red-300',         emoji: '🚨' },
+                  };
+                  const suitColor = prediction.soil_suitability?.color || 'red';
+                  const s = styles[suitColor] || styles.red;
+                  return (
+                    <div className={`rounded-2xl border-2 p-6 ${s.banner}`}>
+                      <div className="flex items-start justify-between flex-wrap gap-4">
+                        <div className="flex items-start gap-4">
+                          <div className="text-4xl">{s.emoji}</div>
+                          <div>
+                            <p className="text-xs font-bold uppercase tracking-widest text-gray-500 mb-2">
+                              AI Analysis Result · {prediction.growth_stage?.label || 'N/A'}
+                            </p>
+                            <div className="flex items-center gap-3 flex-wrap mb-2">
+                              {prediction.soil_suitability && <SuitabilityBadge result={prediction.soil_suitability} />}
+                            </div>
+                            <p className="text-sm text-gray-700 leading-relaxed">{prediction.soil_suitability?.description || 'Analysis complete'}</p>
+                          </div>
+                        </div>
+                        <button
+                          onClick={generatePDF}
+                          disabled={generatingPdf}
+                          className="flex items-center gap-2 px-4 py-2 bg-white border-2 border-gray-200 text-gray-700 text-xs font-bold rounded-xl hover:bg-gray-50 hover:border-gray-300 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm whitespace-nowrap"
+                        >
+                          {generatingPdf ? (
+                            <>
+                              <span className="w-3 h-3 rounded-full border-2 border-gray-400 border-t-transparent animate-spin" />
+                              Gen...
+                            </>
+                          ) : (
+                            '📄 PDF'
+                          )}
+                        </button>
                       </div>
-                      <p className="text-sm text-gray-700 leading-relaxed">{prediction.soil_suitability.description}</p>
                     </div>
-                  </div>
-                  <button
-                    onClick={generatePDF}
-                    disabled={generatingPdf}
-                    className="flex items-center gap-2 px-5 py-2.5 bg-white border-2 border-gray-200 text-gray-700 text-sm font-bold rounded-xl hover:bg-gray-50 hover:border-gray-300 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
-                  >
-                    {generatingPdf ? (
-                      <>
-                        <span className="w-4 h-4 rounded-full border-2 border-gray-400 border-t-transparent animate-spin" />
-                        Generating...
-                      </>
-                    ) : (
-                      '📄 Download PDF Report'
-                    )}
-                  </button>
-                </div>
-              </div>
-            );
-          })()}
+                  );
+                })()}
 
-          {/* NPK Status */}
-          <div className="sh-content-card">
-            <div className="sh-sec-head mb-4">
-              <div className="sh-sec-icon">🌱</div>
-              <div>
-                <h3 className="text-sm font-bold text-gray-800">NPK Nutrient Status</h3>
-                <div className="sh-sec-line" />
-              </div>
-            </div>
-            <div className="grid grid-cols-3 gap-4">
-              {[
-                { key: 'n', icon: '🌿', name: 'Nitrogen',   gradient: 'from-green-100 to-emerald-50',  border: 'border-green-200'  },
-                { key: 'p', icon: '🌸', name: 'Phosphorus', gradient: 'from-pink-100 to-rose-50',      border: 'border-pink-200'   },
-                { key: 'k', icon: '💪', name: 'Potassium',  gradient: 'from-purple-100 to-violet-50',  border: 'border-purple-200' },
-              ].map((nutrient) => (
-                <div key={nutrient.key} className={`text-center bg-gradient-to-br ${nutrient.gradient} rounded-2xl p-4 border ${nutrient.border}`}>
-                  <div className="text-2xl mb-1">{nutrient.icon}</div>
-                  <p className="text-xs font-bold text-gray-500 uppercase mb-2">{nutrient.name}</p>
-                  <NpkBadge status={prediction.npk_status[nutrient.key]} />
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Fertilizer Recommendations */}
-          {(() => {
-            const acres = parseFloat(landAcres);
-            const hasAcres = landAcres && !isNaN(acres) && acres > 0;
-            const fertilizers = [
-              { key: 'urea',    label: 'Urea',    desc: 'Nitrogen source',        icon: '💚', gradient: 'from-blue-50 to-cyan-50',     border: 'border-blue-200',   num: 'text-blue-700'   },
-              { key: 'tsp',     label: 'TSP',     desc: 'Triple Super Phosphate', icon: '🧡', gradient: 'from-orange-50 to-amber-50',  border: 'border-orange-200', num: 'text-orange-700' },
-              { key: 'mop',     label: 'MOP',     desc: 'Muriate of Potash',      icon: '💜', gradient: 'from-purple-50 to-violet-50', border: 'border-purple-200', num: 'text-purple-700' },
-              { key: 'organic', label: 'Organic', desc: 'Organic fertilizer',     icon: '🌱', gradient: 'from-green-50 to-emerald-50', border: 'border-green-200',  num: 'text-green-700'  },
-            ];
-            return (
-              <div className="sh-content-card">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="sh-sec-head">
-                    <div className="sh-sec-icon">🧪</div>
+                {/* NPK Status */}
+                <div className="sh-content-card">
+                  <div className="sh-sec-head mb-4">
+                    <div className="sh-sec-icon">🌱</div>
                     <div>
-                      <h3 className="text-sm font-bold text-gray-800">Fertilizer Recommendations</h3>
+                      <h3 className="text-sm font-bold text-gray-800">NPK Nutrient Status</h3>
                       <div className="sh-sec-line" />
                     </div>
                   </div>
-                  {hasAcres && (
-                    <span className="flex items-center gap-1.5 text-xs bg-green-100 text-green-700 font-bold px-3 py-1.5 rounded-full border border-green-200">
-                      🌾 {acres} acre{acres !== 1 ? 's' : ''}
-                    </span>
-                  )}
-                </div>
-                {!hasAcres && (
-                  <div className="flex items-start gap-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5 mb-4">
-                    <span className="flex-shrink-0 text-sm">💡</span>
-                    Enter your <strong>land area (acres)</strong> above the Analyze button to also see <strong>total fertilizer quantity</strong> for your field.
+                  <div className="grid grid-cols-3 gap-3">
+                    {[
+                      { key: 'n', icon: '🌿', name: 'Nitrogen',   gradient: 'from-green-100 to-emerald-50',  border: 'border-green-200'  },
+                      { key: 'p', icon: '🌸', name: 'Phosphorus', gradient: 'from-pink-100 to-rose-50',      border: 'border-pink-200'   },
+                      { key: 'k', icon: '💪', name: 'Potassium',  gradient: 'from-purple-100 to-violet-50',  border: 'border-purple-200' },
+                    ].map((nutrient) => (
+                      <div key={nutrient.key} className={`text-center bg-gradient-to-br ${nutrient.gradient} rounded-xl p-3 border ${nutrient.border}`}>
+                        <div className="text-2xl mb-1">{nutrient.icon}</div>
+                        <p className="text-xs font-bold text-gray-500 uppercase mb-2">{nutrient.name}</p>
+                        {prediction.npk_status?.[nutrient.key] && <NpkBadge status={prediction.npk_status[nutrient.key]} />}
+                      </div>
+                    ))}
                   </div>
-                )}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                  {fertilizers.map((f) => {
-                    const perAcre = prediction.fertilizers[f.key];
-                    const total   = hasAcres ? Math.round(perAcre * acres * 10) / 10 : null;
-                    return (
-                      <div key={f.key} className={`bg-gradient-to-br ${f.gradient} rounded-2xl p-4 text-center border ${f.border}`}>
-                        <div className="text-2xl mb-1">{f.icon}</div>
-                        <p className="text-xs font-extrabold text-gray-700 uppercase tracking-wide">{f.label}</p>
-                        <p className="text-xs text-gray-400 mb-3">{f.desc}</p>
-                        <div>
-                          <p className={`text-3xl font-extrabold ${f.num}`}>{perAcre}</p>
-                          <p className="text-xs text-gray-400">kg / acre</p>
+                </div>
+
+                {/* Fertilizer Recommendations */}
+                {(() => {
+                  const acres = parseFloat(landAcres);
+                  const hasAcres = landAcres && !isNaN(acres) && acres > 0;
+                  const fertilizers = [
+                    { key: 'urea',    label: 'Urea',    desc: 'Nitrogen',    icon: '💚', gradient: 'from-blue-50 to-cyan-50',     border: 'border-blue-200',   num: 'text-blue-700'   },
+                    { key: 'tsp',     label: 'TSP',     desc: 'Phosphate',   icon: '🧡', gradient: 'from-orange-50 to-amber-50',  border: 'border-orange-200', num: 'text-orange-700' },
+                    { key: 'mop',     label: 'MOP',     desc: 'Potash',      icon: '💜', gradient: 'from-purple-50 to-violet-50', border: 'border-purple-200', num: 'text-purple-700' },
+                    { key: 'organic', label: 'Organic', desc: 'Bio matter',  icon: '🌱', gradient: 'from-green-50 to-emerald-50', border: 'border-green-200',  num: 'text-green-700'  },
+                  ];
+                  return (
+                    <div className="sh-content-card">
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="sh-sec-head">
+                          <div className="sh-sec-icon">🧪</div>
+                          <div>
+                            <h3 className="text-sm font-bold text-gray-800">Fertilizer Recommendations</h3>
+                            <div className="sh-sec-line" />
+                          </div>
                         </div>
                         {hasAcres && (
-                          <div className="mt-3 pt-3 border-t border-white/80">
-                            <p className={`text-xl font-extrabold ${f.num}`}>{total}</p>
-                            <p className="text-xs font-bold text-gray-500">kg total</p>
-                          </div>
+                          <span className="flex items-center gap-1.5 text-xs bg-green-100 text-green-700 font-bold px-2.5 py-1 rounded-full border border-green-200 whitespace-nowrap">
+                            🌾 {acres}ac
+                          </span>
                         )}
                       </div>
-                    );
-                  })}
-                </div>
-                {hasAcres && (
-                  <p className="text-xs text-gray-400 mt-3 text-center">
-                    Per-acre rate × {acres} acres = total quantity required for your field
-                  </p>
-                )}
-              </div>
-            );
-          })()}
+                      {!hasAcres && (
+                        <div className="flex items-start gap-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-4">
+                          <span className="flex-shrink-0 text-sm">💡</span>
+                          <span>Enter field size to see <strong>total quantity</strong> for your field.</span>
+                        </div>
+                      )}
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        {fertilizers.map((f) => {
+                          const perAcre = prediction.fertilizers?.[f.key] ?? 0;
+                          const total   = hasAcres ? Math.round(perAcre * acres * 10) / 10 : null;
+                          return (
+                            <div key={f.key} className={`bg-gradient-to-br ${f.gradient} rounded-xl p-3 text-center border ${f.border}`}>
+                              <div className="text-2xl mb-1">{f.icon}</div>
+                              <p className="text-xs font-extrabold text-gray-700 uppercase tracking-wide">{f.label}</p>
+                              <p className="text-xs text-gray-400 mb-2">{f.desc}</p>
+                              <div>
+                                <p className={`text-2xl font-extrabold ${f.num}`}>{perAcre}</p>
+                                <p className="text-xs text-gray-400">kg/ac</p>
+                              </div>
+                              {hasAcres && (
+                                <div className="mt-2 pt-2 border-t border-white/80">
+                                  <p className={`text-lg font-extrabold ${f.num}`}>{total}</p>
+                                  <p className="text-xs font-bold text-gray-500">total</p>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })()}
 
-          {/* Corrective Actions */}
-          <div className="sh-content-card">
-            <div className="sh-sec-head mb-4">
-              <div className="sh-sec-icon">🔧</div>
-              <div>
-                <h3 className="text-sm font-bold text-gray-800">Corrective Actions</h3>
-                <div className="sh-sec-line" />
-              </div>
-            </div>
-            <div className="space-y-2.5">
-              {prediction.corrective_actions.map((action, i) => (
-                <div
-                  key={i}
-                  className={`flex gap-3 items-start text-sm rounded-xl pl-4 pr-3 py-3 border-l-4 ${ACTION_STYLES[action.type] || 'bg-gray-50 border-gray-300'}`}
-                >
-                  <span className="text-lg flex-shrink-0 leading-none mt-0.5">{ACTION_ICONS[action.type]}</span>
-                  <span className="leading-relaxed">{action.message}</span>
+                {/* Corrective Actions */}
+                <div className="sh-content-card">
+                  <div className="sh-sec-head mb-4">
+                    <div className="sh-sec-icon">🔧</div>
+                    <div>
+                      <h3 className="text-sm font-bold text-gray-800">Corrective Actions</h3>
+                      <div className="sh-sec-line" />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    {prediction.corrective_actions && Array.isArray(prediction.corrective_actions) && prediction.corrective_actions.map((action, i) => (
+                      <div
+                        key={i}
+                        className={`flex gap-3 items-start text-xs rounded-lg pl-3 pr-2.5 py-2.5 border-l-4 ${ACTION_STYLES[action.type] || 'bg-gray-50 border-gray-300'}`}
+                      >
+                        <span className="text-lg flex-shrink-0 leading-none mt-0">{ACTION_ICONS[action.type]}</span>
+                        <span className="leading-relaxed">{action.message}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              ))}
+
+                {/* Close button at bottom */}
+                <div className="pt-2 flex gap-3">
+                  <button
+                    onClick={closeModal}
+                    className="flex-1 px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-xl transition-all duration-200"
+                  >
+                    Close
+                  </button>
+                </div>
+
+              </div>
             </div>
           </div>
-
-        </div>
+        </>
       )}
 
     </div>
-
-    {/* ── Floating "New Analysis" bar when results are visible ── */}
-    {prediction && !showPopup && (
-      <div style={{
-        position: 'fixed', bottom: '24px', left: '50%', transform: 'translateX(-50%)',
-        zIndex: 999, display: 'flex', gap: '10px', alignItems: 'center',
-        background: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(12px)',
-        borderRadius: '16px', padding: '10px 20px',
-        boxShadow: '0 8px 32px rgba(30,45,30,0.18), 0 1px 4px rgba(30,45,30,0.08)',
-        border: '1px solid #e3d9c2',
-        animation: 'shFadeInUp 0.4s ease both',
-      }}>
-        <span style={{ fontSize: '13px', fontWeight: 600, color: '#3b4f3a', fontFamily: 'Inter, sans-serif' }}>✅ Analysis complete</span>
-        <button
-          className="sh-popup-btn sh-popup-btn-ghost"
-          style={{ padding: '8px 18px', fontSize: '13px' }}
-          onClick={() => { setPrediction(null); setPredError(null); setPredInputs(null); }}
-        >
-          🔄 Run New Analysis
-        </button>
-        <button
-          className="sh-popup-btn sh-popup-btn-primary"
-          style={{ padding: '8px 18px', fontSize: '13px' }}
-          onClick={() => document.querySelector('.sh-result-banner')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
-        >
-          📊 View Results
-        </button>
-      </div>
-    )}
-    </>
   );
 }
