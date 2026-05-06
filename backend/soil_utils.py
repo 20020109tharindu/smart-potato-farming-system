@@ -329,7 +329,6 @@ def _predict_old_format(bundle, sensor_data, growth_stage):
             return {'error': f'Missing required feature for old model: {f}'}
 
     input_df = pd.DataFrame([input_values], columns=feature_names)
-
     if use_scaling and scaler is not None:
         input_sc = scaler.transform(input_df)
     else:
